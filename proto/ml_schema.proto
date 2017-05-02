@@ -1,0 +1,72 @@
+
+syntax = "proto2";
+
+package ml_schema;
+
+message ModelPerformance {
+  optional string ModelID = 1;
+  repeated MetricSummary Metrics = 2;
+  repeated CutoffMetrics Cutoffs = 3;
+}
+
+message Model {
+  optional string ID = 1;
+  optional ModelStructure Structure = 2;
+  repeated ModelPerformance Performance = 3;
+}
+
+message MetricSummary {
+  optional string Type = 1;
+  optional float  Value = 2;
+}
+
+message ConfusionMatrix {
+  optional float TruePositive  = 1;
+  optional float TrueNegative  = 2;
+  optional float FalsePositive = 3;
+  optional float FalseNegative = 4;  
+}
+
+message CutoffMetrics {
+  optional float Value = 1;
+  optional ConfusionMatrix Truth = 2;
+}
+
+message ModelStructure {
+  repeated ModelComponent Components = 1;
+}
+
+message ModelComponent {
+  optional float Coeff = 1;
+  oneof Data {
+    RandomForestData RandomForest = 2; 
+    LinearCoeffData  LinearCoeff = 3;
+  } 
+}
+
+message DecisionTree {
+  message DecisionNode {
+    required int32 AboveChild = 1;
+    required int32 BelowChild = 2;
+    required string SplitVariable = 3;
+    required double SplitValue = 4;
+    required bool LeafNode = 5;
+    required bool Label = 6;
+  }
+  repeated DecisionNode Nodes = 1;
+}
+
+message RandomForestData {
+  repeated DecisionTree Forest = 1;
+}
+
+message LinearCoeffData {
+  optional float Intercept = 1;
+  optional float Alpha = 2;
+  repeated FeatureCoefficient Coeff = 3;
+}
+
+message FeatureCoefficient {
+  optional string Feature = 1;
+  optional float Coeff = 2;
+}

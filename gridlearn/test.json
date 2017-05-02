@@ -1,0 +1,16 @@
+{
+  "featureMatrix" : {
+    "transpose" : true,
+    "matrix" : {
+      "class" : "File",
+      "path" : "work/unc.edu_HNSC_IlluminaHiSeq_RNASeqV2.geneExp.expnorm.tsv"
+    }
+  },
+  "labelMatrix" : {
+    "transpose" : true,
+    "matrix" : {
+      "class" : "File",
+      "path" : "work/pancan12_cleaned.matrix.binary"
+    }
+  }  
+}

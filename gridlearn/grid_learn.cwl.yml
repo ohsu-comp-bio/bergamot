@@ -1,0 +1,67 @@
+
+class: Workflow
+cwlVersion: v1.0
+
+inputs:
+  featureMatrix:
+    type: 
+      type: record
+      fields:
+        matrix:
+          type: File
+        transpose:
+          type: boolean
+  labelMatrix:
+    type: 
+      type: record
+      fields:
+        matrix:
+          type: File
+        transpose:
+          type: boolean
+
+outputs:
+  jobs:
+    type: File
+    outputSource: "generate-jobs/jobs"
+    
+
+steps:
+  generate-jobs: 
+    in: 
+      featureMatrix: featureMatrix
+      labelMatrix: labelMatrix
+    out:
+      - jobs
+    run:
+      class: CommandLineTool
+      requirements:
+        - class: DockerRequirement
+          dockerPull: ubuntu
+        - class: InlineJavascriptRequirement
+      baseCommand: [echo, python, /opt/gridlean/grid_learn.py]
+      inputs:
+        featureMatrix:
+          type: 
+            type: record
+            fields:
+              matrix:
+                type: File
+              transpose:
+                type: boolean
+        labelMatrix:
+          type: 
+            type: record
+            fields:
+              matrix:
+                type: File
+              transpose:
+                type: boolean
+      outputs:
+        jobs:
+          type: File
+          outputBinding:
+            glob: "job.*"
+      arguments:
+        - valueFrom: "$(inputs.featureMatrix.transpose ? ['--tf', inputs.featureMatrix.matrix] : ['--f', inputs.featureMatrix.matrix] )"
+        - valueFrom: "$(inputs.labelMatrix.transpose ? ['--tl', inputs.labelMatrix.matrix] : ['--l', inputs.labelMatrix.matrix] )"
