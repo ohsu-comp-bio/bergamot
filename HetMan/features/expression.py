@@ -8,6 +8,8 @@ Author: Michal Grzadkowski <grzadkow@ohsu.edu>
 
 """
 
+from .utils import choose_bmeg_server
+
 import numpy as np
 import pandas as pd
 
@@ -51,13 +53,14 @@ def get_expr_bmeg(cohort):
 
     Examples:
         >>> expr_data = get_expr_bmeg('TCGA-BRCA')
+        >>> expr_data = get_expr_bmeg('TCGA-PCPG')
 
     """
-    oph = Ophion("http://bmeg.io")
+    oph = Ophion(choose_bmeg_server())
     expr_list = {}
 
     # TODO: filter on gene chromosome when BMEG is updated
-    expr_query = ('oph.query().has("gid", "individualCohort:" + cohort)'
+    expr_query = ('oph.query().has("gid", "project:" + cohort)'
                   '.outgoing("hasMember").incoming("biosampleOfIndividual")'
                   '.mark("sample").incoming("expressionForSample")'
                   '.mark("expression").select(["sample", "expression"])')
@@ -89,3 +92,4 @@ def get_expr_bmeg(cohort):
     expr_data = log_norm_expr(expr_mat.loc[:, gene_set])
 
     return expr_data
+

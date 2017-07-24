@@ -1,7 +1,10 @@
 *.pyc
 *.xml
+*.swp
 *scratch*
 .idea
 HetMan/data/drugs/ioria/Cell_line_RMA_proc_basalExp.txt.gz
 HetMan/experiments/drug_predictions/output/
 HetMan/experiments/drug_predictions/plots/
+HetMan/experiments/*/output
+HetMan/experiments/*/plots
