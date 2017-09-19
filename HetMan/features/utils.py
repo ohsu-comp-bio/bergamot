@@ -41,4 +41,3 @@ def choose_bmeg_server(verbose=False):
         raise RuntimeError("No BMEG server available!")
 
     return bmeg_server
-
