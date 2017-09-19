@@ -92,4 +92,3 @@ def get_expr_bmeg(cohort):
     expr_data = log_norm_expr(expr_mat.loc[:, gene_set])
 
     return expr_data
-

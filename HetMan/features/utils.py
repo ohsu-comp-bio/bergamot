@@ -7,7 +7,6 @@ Author: Michal Grzadkowski <grzadkow@ohsu.edu>
 
 from ophion import Ophion
 
-
 def choose_bmeg_server():
     """Chooses a BMEG server to use based on availability."""
 
@@ -38,4 +37,3 @@ def choose_bmeg_server():
         raise RuntimeError("No BMEG server available!")
 
     return bmeg_server
-

@@ -8,3 +8,4 @@ HetMan/experiments/drug_predictions/output/
 HetMan/experiments/drug_predictions/plots/
 HetMan/experiments/*/output
 HetMan/experiments/*/plots
+HetMan/experiments/tf_activity/.Rapp.history
