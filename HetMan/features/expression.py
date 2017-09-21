@@ -66,10 +66,12 @@ def get_expr_bmeg(cohort):
     expr_list = {}
 
     # TODO: filter on gene chromosome when BMEG is updated
+
     expr_query = ('oph.query().has("gid", "project:" + cohort)'
                   '.outgoing("hasMember").incoming("biosampleOfIndividual")'
                   '.mark("sample").incoming("expressionForSample")'
                   '.mark("expression").select(["sample", "expression"])')
+
     samp_count = eval(expr_query).count().execute()[0]
 
     # ensures BMEG is running
