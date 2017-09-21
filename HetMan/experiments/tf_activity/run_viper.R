@@ -1,7 +1,7 @@
 # a script for running VIPER (Califano et al. 2016) to assign activity scores to
 # transcription factors based on the expression profiles of their regulons.
 # VIPER usage: http://127.0.0.1:23290/library/viper/doc/viper.pdf
-# Run from command line: Rscript run_viper.R --args arg1 arg2 arg3 arg4
+# Run from command line: Rscript run_viper.R --args arg1 arg2 arg3
 # where arg1=expr.tsv, arg2=phenotype.tsv, arg3=bmeg_cohort (i.e. TCGA-BRCA)
 # a bash script calls this one: 
 # /Users/manningh/PycharmProjects/bergamot/experiments/tf_activity/run_viper.sh
@@ -37,13 +37,20 @@ main <- function() {
                                as.is=TRUE, check.names=FALSE))
   
   # load phenotyptic data (will be used to separate expr into experimental groups)
-  pdata <- read.table(phen_fl, row.names=1, 
+  pdat <- read.table(phen_fl, row.names=1, 
                       header=FALSE, sep="\t")
+  names(pdat) <- "samp_type"
+
+  # a makeshift assert statement. should have a work around.
+  stopifnot(all(rownames(pdat)==colnames(expr)))
+  
+  # turn it into an AnnotatedDataFrame as ExpressionSet requires
+  pData <- AnnotatedDataFrame(data=pdat)
   
   # build a Biobase ExpressionSet
-  xset <- ExpressionSet(assayData=expr, phenoData=pdata)
+  xset <- ExpressionSet(assayData=expr, phenoData=pData)
   
-  # build regulon selecting vector
+  # build regulon selecting structure
   aracne_regs <- c("regulonblca", "regulonbrca", "reguloncesc", 
                    "reguloncoad", "regulonesca", "regulongbm",
                    "regulonhnsc", "regulonkirc", "regulonkirp", 
@@ -70,19 +77,22 @@ main <- function() {
   
   # write out the regulatory network because aracne2regulon expects a file.
   reg_fl=gsub('pData.tsv', 'reg.adj', phen_fl)
-  write.regulon(regulonbrca, file=reg_fl)
+  write.regulon(reg_network, file=reg_fl)
   
   # load the regulatory network into regulon object
-  regul <- aracne2regulon(regDataPath, xset, verbose=FALSE)
+  # TODO: map our ensembl ids to their entrez ones
+  regul <- aracne2regulon(reg_fl, xset, verbose=FALSE)
   
+  # TODO: ADAPT SAMPLE TYPES TO BE REPRESENTATIVE OF ALL IN TCGA COHORTS
   # calculate signatures (vector of t statistics, then transform to Z scores)
-  signature <- rowTtest(xset, "Group", c(cohort, "Normal"))
+  signature <- rowTtest(xset, "samp_type", c("Primary_Tumor", "Metastatic"), 
+                        "Solid_Tissue_Normal")
   signature <- (qnorm(signature$p.value/2, lower.tail = FALSE) *
                   sign(signature$statistic))[,1]
   
   # generate a null model for the signature to be compared against
-  # CB, CC, and N are categories delineated in pheno in the ExpressionSet
-  nullmodel <- ttestNull(dset, "Group", c(cohort, "Normal"), per = 1000,
+  nullmodel <- ttestNull(xset, "samp_type", c("Primary_Tumor", "Metastatic"), 
+                         "Solid_Tissue_Normal", per = 1000,
                          repos = TRUE, verbose = FALSE)
   
   # generate activity scores based on multiple samples
