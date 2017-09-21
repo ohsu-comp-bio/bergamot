@@ -19,7 +19,14 @@ done
 shift $((OPTIND-1))
 echo "cohort=$cohort, adjfile=$adjfile"
 
+exprfile=tmp-$cohort-expression.tsv
+pfile=tmp-$cohort-pData.tsv
+
+echo "exprfile=$exprfile, pfile=$pfile"
+
 # get and write out the expression file
 # capture the names of that file as expr
-expr=$(prep_for_viper.py -c $cohort 2>&1)
-echo "expr=$expr"
+python prep_for_viper.py -c $cohort
+
+# Run VIPER using the expression data and regulon relationships
+Rscript run_viper.R $exprfile $pfile $cohort

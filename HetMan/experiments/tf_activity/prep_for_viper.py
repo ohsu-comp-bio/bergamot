@@ -8,13 +8,20 @@ Example:
 
 """
 
-from HetMan.features.expression import get_expr_bmeg
 import argparse
 import os
 import sys
+import pandas as pd
+import numpy as np
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
 sys.path += [base_dir + '/../../../../bergamot']
+from HetMan.features.expression import get_expr_bmeg
+
+# the following is for get_sample_type and should be moved with it
+from HetMan.features.utils import choose_bmeg_server
+import json
+from ophion import Ophion
 
 data_dir = base_dir + '/../../data/tf_activity/'
 
@@ -44,7 +51,7 @@ def get_sample_type(cohort, expr_data):
                   '.mark("sample").incoming("expressionForSample")'
                   '.mark("expression").select(["sample"])')
 
-    samp_count = eval(expr_query).count().execute()[0]
+    samp_count = eval(samp_query).count().execute()[0]
 
     # ensures BMEG is running
     if not samp_count.isnumeric():
@@ -59,7 +66,6 @@ def get_sample_type(cohort, expr_data):
     # makes an empty pd.Series where keys are tcga sample ids
     # and the values will be filled the sample_type
     stype_map = pd.Series(index=expr_data.index)
-    print(stype_map.index[:3])
 
     # parses phenotype data and loads it into a list
     # qr = represents one sample's information
@@ -81,7 +87,7 @@ def main():
     parser.add_argument("-c","--cohort",
                         type=str,
                         help="TCGA cohort whose expr will be\n"
-                        "accessed by BMEG (i.e. TCGA-BRCA)"
+                        "accessed by BMEG (i.e. TCGA-BRCA)")
     args = parser.parse_args()
     bmeg_cohort = args.cohort
 
