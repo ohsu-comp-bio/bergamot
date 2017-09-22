@@ -93,6 +93,7 @@ def main():
 
     # load log-normalized expression data as pd.DataFrame of floats
     expr = get_expr_bmeg(bmeg_cohort)
+    print(bmeg_cohort)
 
     # load sample type for each sample present in expr
     # (to become phenotype data in Bioconductor's ExpressionSet object in R)
