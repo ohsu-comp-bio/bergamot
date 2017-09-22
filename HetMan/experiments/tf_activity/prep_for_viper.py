@@ -92,12 +92,15 @@ def main():
     bmeg_cohort = args.cohort
 
     # load log-normalized expression data as pd.DataFrame of floats
+    print("Getting expression data for " + bmeg_cohort)
     expr = get_expr_bmeg(bmeg_cohort)
-    print(bmeg_cohort)
+    print("Expression data obtained")
 
     # load sample type for each sample present in expr
     # (to become phenotype data in Bioconductor's ExpressionSet object in R)
+    print("Getting sample type data")
     samp_type = get_sample_type(bmeg_cohort, expr)
+    print("Sample type data obtained")
 
     # transpose expr to take on format expected by VIPER and write out
     # shape = [n_feats, n_samps]
