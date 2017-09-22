@@ -12,8 +12,8 @@
 # see here for example files:
 # "/Library/Frameworks/R.framework/Versions/3.3/Resources/library/bcellViper"
 # TODO: make basedir a relative path
-basedir <- "/Users/manningh/PycharmProjects/bergamot/HetMan"
-datadir <- paste(basedir,"data/tf_activity/", sep="/")
+basedir <- "."
+datadir <- paste(basedir,"/../../data/tf_activity/", sep="/")
 
 main <- function() {
   
