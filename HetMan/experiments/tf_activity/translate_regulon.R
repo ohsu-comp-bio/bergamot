@@ -8,9 +8,6 @@
 # Created by: Joey Estabrook
 # Created on: 9/21/17
 
-
-
-
 suppressMessages(require(AnnotationDbi))
 suppressMessages(require(org.Hs.eg.db))
 suppressMessages(require(data.table))
@@ -30,13 +27,13 @@ datadir <- paste(basedir,"/../../data/tf_activity/", sep="/")
 
 main = function(){
     setwd(datadir)
-    print(basedir)
-    print(datadir)
+    print(paste("Basedir:", basedir))
+    print(paste("Datadir:", datadir))
     args = commandArgs(trailingOnly = TRUE)
     cohort = (args[1])
-    print(cohort)
+    print(paste("Cohort:", cohort))s
     id = strsplit(cohort,'-')[[1]][2]
-    cohort_table = fread(paste('tmp-', id,'.adj',sep=''))
+    cohort_table = fread(paste('tmp-entrez-TCGA-', id,'-reg.adj',sep=''))
     mappedIDs = getMatrixWithSelectedIds(cohort_table)
     write.table(mappedIDs,paste('tmp-ensembl-',id,'.adj',sep=''),sep='\t',row.names=F,quote=F)
 }

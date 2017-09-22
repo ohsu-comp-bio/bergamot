@@ -1,8 +1,8 @@
 # a script for running VIPER (Califano et al. 2016) to assign activity scores to
 # transcription factors based on the expression profiles of their regulons.
 # VIPER usage: http://127.0.0.1:23290/library/viper/doc/viper.pdf
-# Run from command line: Rscript run_viper.R --args arg1 arg2 arg3
-# where arg1=expr.tsv, arg2=phenotype.tsv, arg3=bmeg_cohort (i.e. TCGA-BRCA)
+# Run from command line: Rscript run_viper.R --args arg1 
+# where arg1=bmeg_cohort (i.e. TCGA-BRCA)
 # a bash script calls this one: 
 # /Users/manningh/PycharmProjects/bergamot/experiments/tf_activity/run_viper.sh
 
@@ -23,12 +23,13 @@ main <- function() {
   args <- commandArgs(trailingOnly = TRUE)
   # expr_fl should be the filename (not path) for matrix
   # with samples as cols and features as rows
-  expr_fl <- paste('./', args[2], sep="")
-  phen_fl <- paste('./', args[3], sep="")
-  cohort <- args[4]
-  library("viper")
-  library("Biobase")
-  library(aracne.networks)
+  cohort <- args[1]
+  expr_fl <- paste("./tmp-", cohort, "-expression.tsv", sep="")
+  phen_fl <- paste("./tmp-", cohort, "-pData.tsv", sep="")
+  
+  suppressMessages(library("viper"))
+  suppressMessages(library("Biobase"))
+  suppressMessages(library(aracne.networks))
 
   print("Loading expression data in R")
   # exprDataPath <- file.path(datadir, expr_fl)
@@ -37,6 +38,7 @@ main <- function() {
                                as.is=TRUE, check.names=FALSE))
   
   print("Loading phenotype data in R")
+  print(paste("phen_fl:", phen_fl))
   # load phenotyptic data (will be used to separate expr into experimental groups)
   pdat <- read.table(phen_fl, row.names=1, 
                       header=FALSE, sep="\t")
@@ -69,14 +71,15 @@ main <- function() {
   signature <- (qnorm(signature$p.value/2, lower.tail = FALSE) *
                   sign(signature$statistic))[,1]
   
-  # UNCOMMENT THIS SECTION WHEN ENTREZ-ENSEMBL MAPPING IS COMPLETE 
   # generate a null model for the signature to be compared against
-  # nullmodel <- ttestNull(xset, "samp_type", c("Primary_Tumor", "Metastatic"), 
-  #                        "Solid_Tissue_Normal", per = 1000,
-  #                        repos = TRUE, verbose = FALSE)
-  # 
-  # # generate activity scores based on multiple samples
-  # mrs <- msviper(signature, regul, nullmodel, verbose = FALSE)
+  print("Generating null model")
+  nullmodel <- ttestNull(xset, "samp_type", c("Primary_Tumor", "Metastatic"), 
+                          "Solid_Tissue_Normal", per = 1000,
+                          repos = TRUE, verbose = FALSE)
+   
+  # generate activity scores based on multiple samples
+  print("Generating activity scores based on multiple samples (msviper)")
+  mrs <- msviper(signature, regul, nullmodel, verbose = FALSE)
   
   # view results:
   # summary(mrs)
@@ -86,6 +89,8 @@ main <- function() {
   # vpres <- viper(dset, regul, verbose = FALSE)
   # get t statistic and p value for difference between the categorizations of B cells
   # tmp <- rowTtest(vpres, "Group", c(cohort, "Normal))
+  
+  print("Reached the end of run_viper.R")
 }
 
 main()
