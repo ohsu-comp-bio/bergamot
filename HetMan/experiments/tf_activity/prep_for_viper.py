@@ -15,7 +15,7 @@ import pandas as pd
 import numpy as np
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
-sys.path += [base_dir + '/../../../../bergamot']
+#sys.path += [base_dir + '/../../../../bergamot']
 from HetMan.features.expression import get_expr_bmeg
 
 # the following is for get_sample_type and should be moved with it
@@ -93,6 +93,7 @@ def main():
 
     # load log-normalized expression data as pd.DataFrame of floats
     expr = get_expr_bmeg(bmeg_cohort)
+    print(bmeg_cohort)
 
     # load sample type for each sample present in expr
     # (to become phenotype data in Bioconductor's ExpressionSet object in R)

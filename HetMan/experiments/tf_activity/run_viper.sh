@@ -8,6 +8,8 @@
 # Usage: source ./run_viper.sh [-c bmeg_cohort] [-a adj_file] [-p pheno_file]
 # Example: source ./run_viper.sh -c TCGA-BRCA -a adj_file
 
+source activate HetMan
+
 OPTIND=1
 
 while getopts "c:a:p:" opt; do
@@ -32,10 +34,10 @@ echo "Running prep_for_viper.py -c $cohort"
 python prep_for_viper.py -c $cohort
 
 echo "Loading and saving ARACNe regulatory network derived from $cohort context"
-Rscript write_aracne_regs.R $cohort
+Rscript write_aracne_regs_joey_v.R $cohort
 
 echo "Mapping regulatory network's entrez IDs to ensembl IDs"
-python joeys_translator.py -c $cohort
+Rscript translate_regulon.R $cohort
 
 # Run VIPER using the expression data and regulon relationships
 echo "Running run_viper.R $exprfile $pfile $cohort"
