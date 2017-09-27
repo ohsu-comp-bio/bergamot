@@ -13,7 +13,9 @@
 # "/Library/Frameworks/R.framework/Versions/3.3/Resources/library/bcellViper"
 # TODO: make basedir a relative path
 basedir <- "."
-datadir <- paste(basedir,"/../../data/tf_activity/", sep="/")
+#datadir <- paste(basedir,"/../../data/tf_activity/", sep="/")
+
+datadir <- paste("/home/exacloud/lustre1/BioCoders/ProjectCollaborations/PRECEPTS/bergamot/HetMan/data/tf_activity")
 
 main <- function() {
   
@@ -23,12 +25,16 @@ main <- function() {
   args <- commandArgs(trailingOnly = TRUE)
   # expr_fl should be the filename (not path) for matrix
   # with samples as cols and features as rows
-  cohort <- args[1]
-  expr_fl <- paste("./tmp-", cohort, "-expression.tsv", sep="")
-  phen_fl <- paste("./tmp-", cohort, "-pData.tsv", sep="")
-  
-  suppressMessages(library("viper"))
-  suppressMessages(library("Biobase"))
+
+  expr_fl <- paste(args[1], sep="")
+  phen_fl <- paste(args[2], sep="")
+  print(phen_fl)
+  print(expr_fl)
+  print(getwd())
+  cohort <- args[3]
+
+  suppressMessages(library(viper))
+  suppressMessages(library(Biobase))
   suppressMessages(library(aracne.networks))
 
   print("Loading expression data in R")
@@ -55,7 +61,8 @@ main <- function() {
   xset <- ExpressionSet(assayData=expr, phenoData=pData)
   
   # specify name of regulon file with ENSEMBL ids
-  reg_fl=paste('./', 'tmp-ensembl-', cohort, '-reg.adj', sep="")
+  id = strsplit(cohort,'-')[[1]][2]
+  reg_fl=paste('./', 'tmp-ensembl-', id, '.adj', sep='')
   print("Regulatory network with ensembl IDs will be loaded from:")
   print(gsub('./', '', reg_fl))
   
@@ -89,7 +96,51 @@ main <- function() {
   # get t statistic and p value for difference between the categorizations of B cells
   # tmp <- rowTtest(vpres, "Group", c(cohort, "Normal))
   
-  print("Reached the end of run_viper.R")
+   # Leading-edge analysis
+   # Identify genes driving enrichment with GSEA (Subramanian et al)
+
+   mrs <- ledge(mrs)
+
+   mrshadow <- shadow(mrs, regulators = 25, verbose = FALSE)
+   save(mrshadow, file=paste(id,'shadow','RData',sep='.'))
+
+   # Synergy analysis
+   # Compute enrichment of all co-regulons for top regulons
+   # TODO update # of regulators with var
+
+   mrs <- msviperCombinatorial(mrs, regulators = 25, verbose = FALSE)
+
+   # Compare enrichment of co-regulon versus union of corresponding regulons
+
+   mrs <- msviperSynergy(mrs, verbose = FALSE)
+   
+   # save results:
+
+   n = summary(mrs,length(mrs$signature)) 
+   sink(file=paste(id,'top',sum(n$p.value < 0.05,na.rm = T),'values.txt',sep='_'))
+   summary(mrs,sum(x$p.value < 0.05,na.rm = T))
+   sink()
+   
+   # save R object 
+   save(mrs,file=paste(id,'mrs','RData',sep='.'))
+
+   pdf(filename = paste(id,'top_10.pdf'))
+   plot(mrs, cex=0.7)
+   dev.off()  
+
+ 
+   # generate activity scores based on a *single* sample
+   vpres <- viper(xset, regul, verbose = FALSE)
+
+   # get t statistic and p value for difference between the categorizations of B cells
+   tmp <- rowTtest(vpres, "Group", c(cohort, "Normal"))
+   df = data.frame(Gene = rownames(tmp$p.value), t = round(tmp$statistic, 2), "p-value" = signif(tmp$p.value, 3))[order(tmp$p.value),] 
+   
+   # Save    
+   write.table(df,paste(id,'single_sample',sep=''),quote=F,sep='\t')
+
 }
 
 main()
+
+print("Reached the end of run_viper.R")

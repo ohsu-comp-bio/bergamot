@@ -5,6 +5,8 @@
 # Usage: source ./run_viper.sh [-c bmeg_cohort]
 # Example: source ./run_viper.sh -c TCGA-BRCA
 
+source activate HetMan
+
 OPTIND=1
 
 while getopts "c:a:p:" opt; do
@@ -25,14 +27,14 @@ echo "$exprfile and $pfile"
 echo "Running prep_for_viper.py -c $cohort"
 python prep_for_viper.py -c $cohort
 
-echo "Loading and saving ARACNe regulatory network derived from $cohort context"
-Rscript write_aracne_regs.R $cohort
+echo "Skipping: Loading and saving ARACNe regulatory network derived from $cohort context"
+#Rscript write_aracne_regs.R $cohort
 
-echo "Mapping regulatory network's ENTREZ IDs to ENSEMBL IDs"
+echo "Mapping regulatory network's entrez IDs to ensembl IDs"
 Rscript translate_regulon.R $cohort
 
 # Run VIPER using the expression data and regulon relationships
-echo "Running run_viper.R $cohort"
-Rscript run_viper.R $cohort
+echo "Running run_viper.R on $cohort"
+Rscript run_viper.R $exprfile $pfile $cohort
 
 echo "Finished executing run_viper.sh"
