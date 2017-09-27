@@ -18,6 +18,9 @@ done
 shift $((OPTIND-1))
 echo "Preparing to run VIPER on $cohort"
 
+exprfile=tmp-entrez-$cohort-expression.tsv
+pfile=tmp-$cohort-pData.tsv
+
 echo "$cohort expression and sample_type (i.e. Tumor v. Normal) will be "
 echo "temporarily saved in ../../data/tf_activity/ as:"
 echo "$exprfile and $pfile"

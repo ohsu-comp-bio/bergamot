@@ -37,6 +37,10 @@ main <- function() {
   suppressMessages(library(Biobase))
   suppressMessages(library(aracne.networks))
 
+  id = tolower(strsplit(cohort,'-')[[1]][2])
+  regul = paste('regulon', id, sep='')
+  data(get(regul))
+   
   print("Loading expression data in R")
   # exprDataPath <- file.path(datadir, expr_fl)
   expr <- as.matrix(read.table(expr_fl, row.names=1,
@@ -67,77 +71,96 @@ main <- function() {
   print(gsub('./', '', reg_fl))
   
   # load the regulatory network into regulon object
-  regul <- aracne2regulon(reg_fl, xset, verbose=FALSE)
-  
+  # regul <- aracne2regulon(reg_fl, xset, verbose=FALSE)
+   
+  # regul <- aracne2regulon(get(regulon), xset, verbose=FALSE) 
+
+
   print("Calculating signature")
   # TODO: ADAPT SAMPLE TYPES TO BE REPRESENTATIVE OF ALL IN TCGA COHORTS
   # calculate signatures (vector of t statistics, then transform to Z scores)
-  signature <- rowTtest(xset, "samp_type", c("Primary_Tumor", "Metastatic"), 
+  sign_t <- rowTtest(xset, "samp_type", c("Primary_Tumor", "Metastatic"), 
                         "Solid_Tissue_Normal")
-  signature <- (qnorm(signature$p.value/2, lower.tail = FALSE) *
-                  sign(signature$statistic))[,1]
+  sign_t <- (qnorm(sign_t$p.value/2, lower.tail = FALSE) *
+                  sign(sign_t$statistic))[,1]
   
+  print("Generating a null model")  
   # generate a null model for the signature to be compared against
-  print("Generating null model")
   nullmodel <- ttestNull(xset, "samp_type", c("Primary_Tumor", "Metastatic"), 
                           "Solid_Tissue_Normal", per = 1000,
                           repos = TRUE, verbose = FALSE)
    
-  # generate activity scores based on multiple samples
-  print("Generating activity scores based on multiple samples (msviper)")
-  mrs <- msviper(signature, regul, nullmodel, verbose = FALSE)
-  
-  # view results:
-  # summary(mrs)
-  # plot(mrs, cex=0.7)
-  
-  # generate activity scores based on a *single* sample
-  # vpres <- viper(dset, regul, verbose = FALSE)
-  # get t statistic and p value for difference between the categorizations of B cells
-  # tmp <- rowTtest(vpres, "Group", c(cohort, "Normal))
-  
-   # Leading-edge analysis
-   # Identify genes driving enrichment with GSEA (Subramanian et al)
-
-   mrs <- ledge(mrs)
-
-   mrshadow <- shadow(mrs, regulators = 25, verbose = FALSE)
-   save(mrshadow, file=paste(id,'shadow','RData',sep='.'))
-
-   # Synergy analysis
-   # Compute enrichment of all co-regulons for top regulons
-   # TODO update # of regulators with var
-
-   mrs <- msviperCombinatorial(mrs, regulators = 25, verbose = FALSE)
-
-   # Compare enrichment of co-regulon versus union of corresponding regulons
-
-   mrs <- msviperSynergy(mrs, verbose = FALSE)
-   
-   # save results:
-
-   n = summary(mrs,length(mrs$signature)) 
-   sink(file=paste(id,'top',sum(n$p.value < 0.05,na.rm = T),'values.txt',sep='_'))
-   summary(mrs,sum(x$p.value < 0.05,na.rm = T))
-   sink()
-   
-   # save R object 
-   save(mrs,file=paste(id,'mrs','RData',sep='.'))
-
-   pdf(filename = paste(id,'top_10.pdf'))
-   plot(mrs, cex=0.7)
-   dev.off()  
-
+  print("Complete")
  
-   # generate activity scores based on a *single* sample
-   vpres <- viper(xset, regul, verbose = FALSE)
+  save.image(paste(id,'image','RData',sep='.'))
+  # generate activity scores based on multiple samples
 
-   # get t statistic and p value for difference between the categorizations of B cells
-   tmp <- rowTtest(vpres, "Group", c(cohort, "Normal"))
-   df = data.frame(Gene = rownames(tmp$p.value), t = round(tmp$statistic, 2), "p-value" = signif(tmp$p.value, 3))[order(tmp$p.value),] 
+  print("Generate activity scores")
+  mrs <- msviper(sign_t, get(regul), nullmodel, verbose = FALSE)
+  print("Complete")
+    
+  save(mrs,file=paste(id,'mrs','initial','RData',sep='.'))
+  # Leading-edge analysis
+  # Identify genes driving enrichment with GSEA (Subramanian et al)
+  
+  print("Perform leading-edge analysis")
+  mrs <- ledge(mrs)
+  
+  save(mrs,file=paste(id,'mrs','ledge','RData',sep='.'))   
+  print("Complete")
+  
+  print("Perform shadow analysis")
+
+  mrshadow <- shadow(mrs, regulators = 25, verbose = FALSE)
+  save(mrshadow, file=paste(id,'mrs','shadow','RData',sep='.'))
    
-   # Save    
-   write.table(df,paste(id,'single_sample',sep=''),quote=F,sep='\t')
+  save.image(paste(id,'image','RData',sep='.'))
+  # Synergy analysis
+  # Compute enrichment of all co-regulons for top regulons
+  # TODO update # of regulators with var
+  print("Complete")
+
+  print("Compute enrichment of co-regulons")
+
+  mrs <- msviperCombinatorial(mrs, regulators = 25, verbose = FALSE)
+   
+  save(mrs, file=paste(id,'mrs','Comb','RData',sep='.'))
+  # Compare enrichment of co-regulon versus union of corresponding regulons
+
+  mrs <- msviperSynergy(mrs, verbose = FALSE)
+  save(mrs, file=paste(id,'mrs','Syn','RData',sep='.'))
+  print("Complete")
+  
+  # save results:
+  print("Save viper object to file")
+  n = summary(mrs,length(mrs$signature)) 
+  sink(file=paste(id,'top',sum(n$p.value < 0.05,na.rm = T),'values.txt',sep='_'))
+  summary(mrs,sum(x$p.value < 0.05,na.rm = T))
+  sink()
+   
+  # save R object 
+  save(mrs,file=paste(id,'mrs','RData',sep='.'))
+
+  print("Generating images...")
+
+  pdf(filename = paste(id,'top_10.pdf'))
+  plot(mrs, cex=0.7)
+  dev.off()  
+ 
+  print("Complete")
+ 
+  # generate activity scores based on a *single* sample
+  print("Generate per-sample activity scores")
+  vpres <- viper(xset, get(regul), verbose = FALSE)
+
+  save(vpres,file=paste(id,'mrs','RData',sep='.'))
+  print("Complete")
+
+  # get t statistic and p value for difference between the categorizations of B cells
+  df = data.frame(Gene = rownames(sign_t$p.value), t = round(sign_t$statistic, 2), "p-value" = signif(sign_t$p.value, 3))[order(sign_t$p.value),] 
+   
+  # Save    
+  write.table(df,paste(id,'single_sample',sep=''),quote=F,sep='\t')
 
 }
 

@@ -6,7 +6,6 @@
 suppressMessages(library(aracne.networks))
 
 basedir <- "."
-#datadir <- paste(basedir,"/../../data/tf_activity/", sep="/")
 datadir <- paste("/home/exacloud/lustre1/BioCoders/ProjectCollaborations/PRECEPTS/bergamot/HetMan/data/tf_activity")
 
 main = function(){
