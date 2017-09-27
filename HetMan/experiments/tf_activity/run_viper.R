@@ -59,9 +59,8 @@ main <- function() {
   print("Regulatory network with ensembl IDs will be loaded from:")
   print(gsub('./', '', reg_fl))
   
-  # UNCOMMENT THIS WHEN ENTREZ-ENSEMBL MAPPING IS COMPLETE
   # load the regulatory network into regulon object
-  # regul <- aracne2regulon(reg_fl, xset, verbose=FALSE)
+  regul <- aracne2regulon(reg_fl, xset, verbose=FALSE)
   
   print("Calculating signature")
   # TODO: ADAPT SAMPLE TYPES TO BE REPRESENTATIVE OF ALL IN TCGA COHORTS
