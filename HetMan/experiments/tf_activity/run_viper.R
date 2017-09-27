@@ -1,8 +1,8 @@
 # a script for running VIPER (Califano et al. 2016) to assign activity scores to
 # transcription factors based on the expression profiles of their regulons.
 # VIPER usage: http://127.0.0.1:23290/library/viper/doc/viper.pdf
-# Run from command line: Rscript run_viper.R --args arg1 arg2 arg3
-# where arg1=expr.tsv, arg2=phenotype.tsv, arg3=bmeg_cohort (i.e. TCGA-BRCA)
+# Run from command line: Rscript run_viper.R --args arg1 
+# where arg1=bmeg_cohort (i.e. TCGA-BRCA)
 # a bash script calls this one: 
 # /Users/manningh/PycharmProjects/bergamot/experiments/tf_activity/run_viper.sh
 
@@ -13,7 +13,6 @@
 # "/Library/Frameworks/R.framework/Versions/3.3/Resources/library/bcellViper"
 # TODO: make basedir a relative path
 basedir <- "."
-#datadir <- paste(basedir,"/../../data/tf_activity/", sep="/")
 
 datadir <- paste("/home/exacloud/lustre1/BioCoders/ProjectCollaborations/PRECEPTS/bergamot/HetMan/data/tf_activity")
 
@@ -42,6 +41,7 @@ main <- function() {
                                as.is=TRUE, check.names=FALSE))
   
   print("Loading phenotype data in R")
+  print(paste("phen_fl:", phen_fl))
   # load phenotyptic data (will be used to separate expr into experimental groups)
   pdat <- read.table(phen_fl, row.names=1, 
                       header=FALSE, sep="\t")
@@ -75,7 +75,6 @@ main <- function() {
   signature <- (qnorm(signature$p.value/2, lower.tail = FALSE) *
                   sign(signature$statistic))[,1]
   
-  # UNCOMMENT THIS SECTION WHEN ENTREZ-ENSEMBL MAPPING IS COMPLETE 
   # generate a null model for the signature to be compared against
    nullmodel <- ttestNull(xset, "samp_type", c("Primary_Tumor", "Metastatic"), 
                           "Solid_Tissue_Normal", per = 1000,
