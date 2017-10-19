@@ -48,12 +48,19 @@ class PartitionOptim(object):
                                testing cohorts.
         base_mtype (MuType): The set of mutations we are trying to partition
                              into sub-types.
+        clf (HetMan.predict.MutPipe): A classification pipeline.
+        verbose (int): How much information to print by default during the
+                       operation of the optimizer.
 
     Examples:
-        >>> PartitionOptim(cdata, MuType({('Gene', 'TP53'): None}),
-                           'TP53', Lasso)
-        >>> PartitionOptim(cdata, MuType({('Gene', 'CDH1'): None}),
-                           'CDH1', rForest)
+        >>> PartitionOptim(cdata, MuType({('Gene', 'TP53'): None}), Lasso)
+        >>> PartitionOptim(cdata, MuType({('Gene', 'CDH1'): None}), rForest)
+        >>> PartitionOptim(
+        >>>     cdata,
+        >>>     MuType({('Gene', 'TTN'): {
+        >>>             ('Form', 'Missense_Mutation'): None }}),
+        >>>     ElasticNet
+        >>>     )
 
     """
 
@@ -104,7 +111,8 @@ class PartitionOptim(object):
                 out_scores[mtype]['Null'] = self.mtype_scores[mtype]['Null']
 
             # otherwise, get the samples that have the optimizer's base
-            # mutation but not any mutations in this sub-type
+            # mutation but not any mutations in this sub-type that we have to
+            # exclude from the upcoming classification tasks
             else:
                 ex_train = (self.base_train_samps
                             - mtype.get_samples(self.cdata.train_mut))
@@ -162,7 +170,7 @@ class PartitionOptim(object):
 
         return out_scores
 
-    def get_null_performance(self, draw_count=125):
+    def get_null_performance(self, draw_count=50):
         """Estimates the null score distribution for the current sub-type.
 
         Args:
@@ -173,33 +181,54 @@ class PartitionOptim(object):
             >>> optim.get_null_performance(100)
 
         """
-
-        mtype_samps = self.cur_mtype.get_samples(self.cdata.train_mut)
         draw_perfs = []
 
-        samp_draws = [random.sample(mtype_samps,
-                                    random.randint(self.min_mtype_size - 4,
-                                                   len(mtype_samps) - 1))
-                      for _ in range(draw_count)]
+        # gets the samples in the training and testing cohorts that have the
+        # current sub-type's mutation
+        mtype_train_samps = self.cur_mtype.get_samples(self.cdata.train_mut)
+        mtype_test_samps = self.cur_mtype.get_samples(self.cdata.test_mut)
 
-        for samp_draw in samp_draws:
+        min_samp_prop = (self.min_mtype_size / len(mtype_train_samps)) ** 1.1
+        min_train_samps = (int(min_samp_prop * len(mtype_train_samps))) + 1
+        min_test_samps = (int(min_samp_prop * len(mtype_test_samps))) + 1
+
+        # samples subsets of the current mutation sub-type's samples in the
+        # training and testing cohorts
+        samp_draws = [
+            (random.sample(mtype_train_samps,
+                           random.randint(min_train_samps,
+                                          len(mtype_train_samps) - 1)),
+             random.sample(mtype_test_samps,
+                           random.randint(min_test_samps,
+                                          len(mtype_test_samps) - 1))
+             )
+            for _ in range(draw_count)
+            ]
+
+        # for each sampled subset, get the other samples with the current
+        # sub-type's mutations to exclude from classification measurement
+        for train_samp_draw, test_samp_draw in samp_draws:
             use_clf = self.clf()
-            ex_samps = mtype_samps - set(samp_draw)
+
+            ex_train_samps = mtype_train_samps - set(train_samp_draw)
+            ex_test_samps = mtype_test_samps - set(test_samp_draw)
 
             use_clf.tune_coh(self.cdata, self.cur_mtype,
                              tune_splits=8, test_count=24, parallel_jobs=12,
                              exclude_genes=self.genes,
-                             exclude_samps=ex_samps)
+                             exclude_samps=ex_train_samps)
             
             use_clf.fit_coh(self.cdata, self.cur_mtype,
                             exclude_genes=self.genes,
-                            exclude_samps=ex_samps)
+                            exclude_samps=ex_train_samps)
 
+            # stores the size of this sampled subset and how well the trained
+            # classifier predicts
             draw_perfs += [[
-                len(samp_draw),
+                len(train_samp_draw),
                 use_clf.eval_coh(self.cdata, self.cur_mtype,
                                  exclude_genes=self.genes,
-                                 exclude_samps=ex_samps)
+                                 exclude_samps=ex_test_samps)
                 ]]
 
         return draw_perfs
@@ -468,7 +497,9 @@ class PartitionOptim(object):
             # of the current type
             clf_diff = self.get_clf_diff(
                 [mtype for mtype, _ in new_scores[:-1]])
-            clf_diff.update({self.cur_mtype: 100})
+            clf_diff = {gn: (diff if diff < 20 else 20)
+                        for gn, diff in clf_diff.items()}
+            clf_diff.update({self.cur_mtype: 20})
 
             if self.verbose > 1:
                 print("\nResults of background classification analysis and\n"

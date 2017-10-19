@@ -116,6 +116,6 @@ dependencies:
 - pip:
   - ipython-genutils==0.2.0
   - prompt-toolkit==1.0.15
-  - pulp-py3==1.5.5
+  - pulp==1.5.6
 prefix: /home/exacloud/lustre1/BioCoders/Applications/miniconda3/envs/schism
 

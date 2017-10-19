@@ -598,11 +598,11 @@ class VariantCohort(PresenceCohort, UniCohort):
         # and removes missing values as necessary
         if expr_source == 'BMEG':
             expr_mat = get_expr_bmeg(cohort)
-            expr = log_norm_expr(expr_mat.fillna(expr_mat.min().min()))
+            expr = log_norm_expr(expr_mat.fillna(0.0))
 
         elif expr_source == 'Firehose':
             expr_mat = get_expr_firehose(cohort, coh_args['data_dir'])
-            expr = expr_mat.fillna(expr_mat.min().min())
+            expr = log_norm_expr(expr_mat.fillna(expr_mat.min().min()))
 
         else:
             raise ValueError("Unrecognized source of expression data!")

@@ -65,11 +65,13 @@ def get_expr_bmeg(cohort):
     oph = Ophion(choose_bmeg_server(verbose=True))
     expr_list = {}
 
-    # TODO: filter on gene chromosome when BMEG is updated
-    expr_query = ('oph.query().has("gid", "project:" + cohort)'
-                  '.outgoing("hasMember").incoming("biosampleOfIndividual")'
-                  '.mark("sample").incoming("expressionForSample")'
-                  '.mark("expression").select(["sample", "expression"])')
+    # builds a query that will traverse the nodes and edges in BMEG to find
+    # the samples in the given cohort with expression data, gets the number
+    # of samples that this query returns
+    expr_query = ('oph.query().has("gid", "cohort:" + cohort)'
+                  '.outgoing("hasSample").mark("sample")'
+                  '.incoming("expressionFor").mark("expression")'
+                  '.select(["sample", "expression"])')
     samp_count = eval(expr_query).count().execute()[0]
 
     # ensures BMEG is running
@@ -86,22 +88,25 @@ def get_expr_bmeg(cohort):
     for qr in eval(expr_query).execute():
         dt = json.loads(qr)
         if ('expression' in dt and 'properties' in dt['expression']
-                and 'serializedExpressions'
-                in dt['expression']['properties']):
+                and 'expressions' in dt['expression']['properties']):
             expr_list[dt['sample']['gid']] = json.loads(
-                dt['expression']['properties']['serializedExpressions'])
+                dt['expression']['properties']['expressions'])
 
-    # creates a sample x expression matrix and normalizes it
-    expr_mat = pd.DataFrame(expr_list).transpose().fillna(0.0)
-    gene_set = expr_mat.columns
-    expr_mat.index = [x[-1] for x in expr_mat.index.str.split(':')]
-    expr_data = log_norm_expr(expr_mat.loc[:, gene_set])
+    # creates a sample x expression matrix and parses the sample names
+    expr_data = pd.DataFrame(expr_list).transpose()
+    expr_data.index = [x[-1] for x in expr_data.index.str.split(':')]
 
     return expr_data
 
 
 def get_expr_firehose(cohort, data_dir):
     """Loads RNA-seq gene-level expression data downloaded from Firehose.
+
+    Firehose data is acquired by downloading the firehose_get from
+        https://confluence.broadinstitute.org/display/GDAC/Download
+    into `data_dir` and then running
+        ./firehose_get -o RSEM_genes_normalized data 2016_01_28 brca
+    from the command line, assuming firehose_get v0.4.11
 
     Args:
         cohort (str): The name of a TCGA cohort available in Broad Firehose.
@@ -122,15 +127,20 @@ def get_expr_firehose(cohort, data_dir):
         "*Merge_rnaseqv2_*_RSEM_genes_normalized_*.Level_3*.tar.gz"
         ))[0])
 
+    # finds the file in the tarball that contains the expression data, loads
+    # it into a formatted dataframe
     expr_fl = expr_tar.extractfile(expr_tar.getmembers()[0])
     expr_data = pd.read_csv(BytesIO(expr_fl.read()),
                             sep='\t', skiprows=[1], index_col=0,
-                            engine='python')
-    expr_data = log_norm_expr(expr_data.transpose().fillna(0.0))
+                            engine='python').transpose()
 
+    # parses the expression matrix columns to get the gene names, removes the
+    # columns that don't correspond to known genes
     expr_data.columns = [gn.split('|')[0] if isinstance(gn, str) else gn
                          for gn in expr_data.columns]
     expr_data = expr_data.iloc[:, expr_data.columns != '?']
+
+    # parses expression matrix rows to get TCGA sample barcodes
     expr_data.index = ["-".join(x[:4])
                        for x in expr_data.index.str.split('-')]
 
