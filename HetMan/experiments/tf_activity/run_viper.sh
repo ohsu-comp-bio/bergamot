@@ -31,12 +31,11 @@ echo "Running prep_for_viper.py -c $cohort"
 python prep_for_viper.py -c $cohort
 
 echo "Skipping: Loading and saving ARACNe regulatory network derived from $cohort context"
-#Rscript write_aracne_regs.R $cohort
+# Rscript write_aracne_regs.R $cohort
 
 echo "Mapping regulatory network's entrez IDs to ensembl IDs"
-Rscript translate_regulon.R $cohort
+Rscript translate_tcga.R $cohort
 
-# Run VIPER using the expression data and regulon relationships
 echo "Running run_viper.R on $cohort"
 Rscript run_viper.R $exprfile $pfile $cohort
 

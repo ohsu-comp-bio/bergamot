@@ -6,15 +6,15 @@
 # a bash script calls this one: 
 # /Users/manningh/PycharmProjects/bergamot/experiments/tf_activity/run_viper.sh
 
-# Author: Hannah Manning
+# Author: Hannah Manning and Joey Estabrook
 # Date: Aug 4, 2017
 
 # see here for example files:
 # "/Library/Frameworks/R.framework/Versions/3.3/Resources/library/bcellViper"
 # TODO: make basedir a relative path
+
 basedir <- "."
 #datadir <- paste(basedir,"/../../data/tf_activity/", sep="/")
-
 datadir <- paste("/home/exacloud/lustre1/BioCoders/ProjectCollaborations/PRECEPTS/bergamot/HetMan/data/tf_activity")
 
 main <- function() {
@@ -72,9 +72,7 @@ main <- function() {
   
   # load the regulatory network into regulon object
   # regul <- aracne2regulon(reg_fl, xset, verbose=FALSE)
-   
   # regul <- aracne2regulon(get(regulon), xset, verbose=FALSE) 
-
 
   print("Calculating signature")
   # TODO: ADAPT SAMPLE TYPES TO BE REPRESENTATIVE OF ALL IN TCGA COHORTS

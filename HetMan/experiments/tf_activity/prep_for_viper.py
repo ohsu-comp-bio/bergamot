@@ -95,7 +95,6 @@ def main():
     print("Getting expression data for " + bmeg_cohort)
     expr = get_expr_bmeg(bmeg_cohort)
     print("Expression data obtained")
-    print(bmeg_cohort)
 
     # load sample type for each sample present in expr
     # (to become phenotype data in Bioconductor's ExpressionSet object in R)

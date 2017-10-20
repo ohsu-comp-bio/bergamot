@@ -1,5 +1,5 @@
 # a script for translating regulons with ENTREZID identifiers to ENSEMBL.
-# Regulons are generated from aracne.networks package (v.1.2.0).
+# are generated from aracne.networks package (v.1.2.0).
 # aracne.networks usage https://bioconductor.org/packages/release/data/experiment/manuals/aracne.networks/man/aracne.networks.pdf
 # Run from command line: Rscript translate_regulon.R --args args1
 # where arg1= TCGA cohort (i.e. TCGA-BRCA)
@@ -21,8 +21,8 @@ getMatrixWithSelectedIds = function(df, columns=list('Regulator','Target'), db='
     return(df2)
 }
 
-basedir <- "."
 #datadir <- paste(basedir,"/../../data/tf_activity/", sep="/")
+basedir <- "."
 datadir <- paste("/home/exacloud/lustre1/BioCoders/ProjectCollaborations/PRECEPTS/bergamot/HetMan/data/tf_activity")
 
 main = function(){
