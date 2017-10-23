@@ -131,6 +131,8 @@ def get_expr_firehose(cohort, data_dir, type_key = None):
         cohort (str): The name of a TCGA cohort available in Broad Firehose.
         data_dir (str): The local directory where the Firehose data was
                         downloaded.
+	type_key (str): datatype to query i.e. rppa, cnv, expr. Defaults to expr.
+
     Returns:
         expr_data (pandas DataFrame of float), shape = [n_samps, n_feats]
     Examples:
