@@ -102,39 +102,77 @@ def get_expr_bmeg(cohort):
     return expr_data
 
 
-def get_expr_firehose(cohort, data_dir):
-    """Loads RNA-seq gene-level expression data downloaded from Firehose.
+def member_idx(tar_members, cnv=False):
+    """Retrieve list index location for normalized tar firehose data.
+    Args:
+        tar_members (tarfile.TarFile): tarfile to be read in as pandas DataFrame
+        cnv (str): Denotes whether to use normalized cnv data.
 
+    Returns:
+        i (int): Index integer of tar_member file to be read in
+    """
+    for i in range(len(tar_members.getmembers())):
+        if cnv:
+            if 'all_data_by_genes.txt' in tar_members.getmembers()[i].get_info()['name']:
+                return i
+        else:
+            if 'data.txt' in tar_members.getmembers()[i].get_info()['name']:
+                return i
+
+
+def get_expr_firehose(cohort, data_dir, type_key = None):
+    """Loads RNA-seq gene-level expression data downloaded from Firehose.
+    Firehose data is acquired by downloading the firehose_get from
+        https://confluence.broadinstitute.org/display/GDAC/Download
+    into `data_dir` and then running
+        ./firehose_get -o RSEM_genes_normalized data 2016_01_28 brca
+    from the command line, assuming firehose_get v0.4.11
     Args:
         cohort (str): The name of a TCGA cohort available in Broad Firehose.
         data_dir (str): The local directory where the Firehose data was
                         downloaded.
-
     Returns:
         expr_data (pandas DataFrame of float), shape = [n_samps, n_feats]
-
     Examples:
         >>> expr_data = get_expr_bmeg(
         >>>     'BRCA', '/home/users/grzadkow/compbio/input-data/firehose')
         >>> expr_data = get_expr_bmeg('SKCM', '../firehose')
-
     """
-    expr_tar = tarfile.open(glob.glob(os.path.join(
-        data_dir, "stddata__2016_01_28", cohort, "20160128",
-        "*Merge_rnaseqv2_*_RSEM_genes_normalized_*.Level_3*.tar.gz"
-        ))[0])
+    # TODO : incorporate humanmethylation27 and humanmethylation450
+    data_type = {'cnv':tarfile.open(glob.glob(os.path.join(data_dir, "analyses__2016_01_28", cohort, "20160128","*CopyNumber_Gistic2*Level_4*.tar.gz"))[0]),
+                 'rppa':tarfile.open(glob.glob(os.path.join(data_dir, "stddata__2016_07_15", cohort, "20160715","*Merge_protein_exp_*protein_normalization*.Level_3*.tar.gz"))[0]),
+                 'expr':tarfile.open(glob.glob(os.path.join(data_dir, "stddata__2016_01_28", cohort, "20160128","*Merge_rnaseqv2_*_RSEM_genes_normalized_*.Level_3*.tar.gz"))[0])}
 
-    expr_fl = expr_tar.extractfile(expr_tar.getmembers()[0])
-    expr_data = pd.read_csv(BytesIO(expr_fl.read()),
-                            sep='\t', skiprows=[1], index_col=0,
-                            engine='python')
-    expr_data = log_norm_expr(expr_data.transpose().fillna(0.0))
+    # select datatype to query, defaults to expression data
+    if type_key is None:
+        expr_tar = data_type['expr']
+    else:
+        expr_tar = data_type[type_key]
 
+    if type_key == 'cnv':
+        cnv = True
+    else:
+        cnv = False
+
+    # finds the file in the tarball that contains the expression data, loads
+    # it into a formatted dataframe
+    expr_fl = expr_tar.extractfile(expr_tar.getmembers()[member_idx(expr_tar, cnv)])
+    if cnv:
+        expr_data = pd.read_csv(BytesIO(expr_fl.read()),
+                                sep='\t', skiprows=[1], index_col=0,
+                                engine='python').iloc[:, 2:].transpose()
+    else:
+        expr_data = pd.read_csv(BytesIO(expr_fl.read()),
+                                sep='\t', skiprows=[1], index_col=0,
+                                engine='python').transpose()
+    # parses the expression matrix columns to get the gene names, removes the
+    # columns that don't correspond to known genes
     expr_data.columns = [gn.split('|')[0] if isinstance(gn, str) else gn
                          for gn in expr_data.columns]
     expr_data = expr_data.iloc[:, expr_data.columns != '?']
+
+    # parses expression matrix rows to get TCGA sample barcodes
     expr_data.index = ["-".join(x[:4])
                        for x in expr_data.index.str.split('-')]
 
     return expr_data
-
