@@ -1072,3 +1072,5 @@ class TransferDreamCohort(TransferCohort):
             use_genes = self.test_prot.columns
 
         return self.test_prot.loc[samps, use_genes]
+
+    # todo: include TransferTFActivityCohort when it's halfway presentable

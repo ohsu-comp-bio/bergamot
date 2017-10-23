@@ -163,3 +163,74 @@ model_code_ens = '''
 
     }'''
 
+tf_model_code = """
+    data {
+        // todo: in python wrapper ensure that the number of samples and gen features matches in rppa and expr
+
+        int <lower=1> N;        // number of samples
+        int <lower=1> G;        // number of genetic features
+
+        // set up expression data structure        
+        real e[N, G];           // gene expression (log norm'd rna-seq)
+
+        // set up rppa data structure
+        real p[N, G];           // rppa
+
+        // set up regulatory network data structure
+        int <lower=G> R;                // number of tf-target edges (relationships) in the .adj file
+        int <lower=1, upper=G> tf[R];   // tf nodes (in example above, see regulator vector)
+        int <lower=1, upper=G> tg[R];   // target nodes (in example above, see target vector)
+        real <lower=-1, upper=1> moa[R]; // mode of regulation (see aracne manual)
+        real <lower=0, upper=1> lkly[R]; // likelihood (see aracne manual)
+
+        // provide it with unique tfs and targets
+        // todo: unique the tf vector and read that in here
+        int <lower=1, upper=G> UTF;      // number of unique tfs
+        int <lower=1, upper=G> UTG;      // number of unique tgs
+        int <lower=1, upper=G> uniqtf[UTF]; // use this mapping later for UTF to uniqtf in tfa distribution assignment
+        int <lower=1, upper=G> uniqtg[UTG]; // ''
+
+    }
+
+    parameters {
+        matrix<lower=0, upper=1>[N, UTF] tfa_matrix;      // does this need to be a transformed parameter
+
+        vector<lower=0, upper=1>[UTF] alpha;              // make more informative? add priors in models?
+        vector<lower=0, upper=1>[UTF] beta;               // ''
+
+        // other parameters?
+
+    }
+
+    transformed_parameters {
+        matrix[N, G] pred_p;
+
+        // yikes
+        for (G in 1:G) {                        // for each gene
+            for (n in 1:N) {                    // for each sample
+                pred_p[n, g]=0;                 // set the pred_p to 0 at the start of each sample's iterations
+                for (r in 1:R) {                // for each tf-target relationship
+                    if (tg[r] == g) {           // if the target in that relationship is the gene of interest
+                        for (u in 1:UTF) {              // for each index value in the length of the number of unique tfs
+                            if uniqtf[u] == tf[r] {     // use that index to grab the tf from uniqtfs (which is a necessary mapping for tfa_matrix below
+                                pred_p[n,g]=pred_p[n,g] + tfa_matrix[n,u] * moa[r] * lkly[r];
+                            }
+                        }
+                    }
+                }
+            }
+        }                                                                                                                                                  }
+
+    model {
+        for (n in 1:N) {
+            for (u in 1:UTF) {
+                tfa_matrix[n, u] ~ beta(alpha[u], beta[u])
+            }
+        }
+
+        for (n in 1:N) {
+            for (g in 1:G) {
+                p[n,g] ~ normal(pred_p[n,g], 0.01)
+
+    }
+"""
