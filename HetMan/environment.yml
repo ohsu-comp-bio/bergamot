@@ -1,4 +1,4 @@
-name: visions
+name: precepts
 channels:
 - etetoolkit
 - conda-forge
@@ -116,5 +116,6 @@ dependencies:
 - pip:
   - ipython-genutils==0.2.0
   - prompt-toolkit==1.0.15
-prefix: /home/exacloud/lustre1/BioCoders/Applications/miniconda3/envs/visions
+  - pulp-py3==1.5.5
+prefix: /home/exacloud/lustre1/BioCoders/Applications/miniconda3/envs/precepts
 
