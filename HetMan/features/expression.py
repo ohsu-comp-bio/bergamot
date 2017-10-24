@@ -119,8 +119,7 @@ def member_idx(tar_members, cnv=False):
             if 'data.txt' in tar_members.getmembers()[i].get_info()['name']:
                 return i
 
-
-def get_expr_firehose(cohort, data_dir, type_key = None):
+def get_expr_firehose(cohort, data_dir):
     """Loads RNA-seq gene-level expression data downloaded from Firehose.
     Firehose data is acquired by downloading the firehose_get from
         https://confluence.broadinstitute.org/display/GDAC/Download
@@ -131,8 +130,6 @@ def get_expr_firehose(cohort, data_dir, type_key = None):
         cohort (str): The name of a TCGA cohort available in Broad Firehose.
         data_dir (str): The local directory where the Firehose data was
                         downloaded.
-	type_key (str): datatype to query i.e. rppa, cnv, expr. Defaults to expr.
-
     Returns:
         expr_data (pandas DataFrame of float), shape = [n_samps, n_feats]
     Examples:
@@ -140,33 +137,18 @@ def get_expr_firehose(cohort, data_dir, type_key = None):
         >>>     'BRCA', '/home/users/grzadkow/compbio/input-data/firehose')
         >>> expr_data = get_expr_bmeg('SKCM', '../firehose')
     """
-    # TODO : incorporate humanmethylation27 and humanmethylation450
-    data_type = {'cnv':tarfile.open(glob.glob(os.path.join(data_dir, "analyses__2016_01_28", cohort, "20160128","*CopyNumber_Gistic2*Level_4*.tar.gz"))[0]),
-                 'rppa':tarfile.open(glob.glob(os.path.join(data_dir, "stddata__2016_07_15", cohort, "20160715","*Merge_protein_exp_*protein_normalization*.Level_3*.tar.gz"))[0]),
-                 'expr':tarfile.open(glob.glob(os.path.join(data_dir, "stddata__2016_01_28", cohort, "20160128","*Merge_rnaseqv2_*_RSEM_genes_normalized_*.Level_3*.tar.gz"))[0])}
-
-    # select datatype to query, defaults to expression data
-    if type_key is None:
-        expr_tar = data_type['expr']
-    else:
-        expr_tar = data_type[type_key]
-
-    if type_key == 'cnv':
-        cnv = True
-    else:
-        cnv = False
+    expr_tar = tarfile.open(glob.glob(os.path.join(
+        data_dir, "stddata__2016_01_28", cohort, "20160128",
+        "*Merge_rnaseqv2_*_RSEM_genes_normalized_*.Level_3*.tar.gz"
+        ))[0])
 
     # finds the file in the tarball that contains the expression data, loads
     # it into a formatted dataframe
-    expr_fl = expr_tar.extractfile(expr_tar.getmembers()[member_idx(expr_tar, cnv)])
-    if cnv:
-        expr_data = pd.read_csv(BytesIO(expr_fl.read()),
-                                sep='\t', skiprows=[1], index_col=0,
-                                engine='python').iloc[:, 2:].transpose()
-    else:
-        expr_data = pd.read_csv(BytesIO(expr_fl.read()),
-                                sep='\t', skiprows=[1], index_col=0,
-                                engine='python').transpose()
+    expr_fl = expr_tar.extractfile(expr_tar.getmembers()[0])
+    expr_data = pd.read_csv(BytesIO(expr_fl.read()),
+                            sep='\t', skiprows=[1], index_col=0,
+                            engine='python').transpose()
+
     # parses the expression matrix columns to get the gene names, removes the
     # columns that don't correspond to known genes
     expr_data.columns = [gn.split('|')[0] if isinstance(gn, str) else gn
@@ -178,3 +160,4 @@ def get_expr_firehose(cohort, data_dir, type_key = None):
                        for x in expr_data.index.str.split('-')]
 
     return expr_data
+
