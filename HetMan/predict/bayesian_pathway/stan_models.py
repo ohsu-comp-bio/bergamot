@@ -163,10 +163,8 @@ model_code_ens = '''
 
     }'''
 
-tf_model_code = """
+model_code_tf = """
     data {
-        // todo: in python wrapper ensure that the number of samples and gen features matches in rppa and expr
-
         int <lower=1> N;        // number of samples
         int <lower=1> G;        // number of genetic features
 
@@ -208,14 +206,15 @@ tf_model_code = """
         // yikes
         for (G in 1:G) {                        // for each gene
             for (n in 1:N) {                    // for each sample
-                pred_p[n, g]=0;                 // set the pred_p to 0 at the start of each sample's iterations
-                for (r in 1:R) {                // for each tf-target relationship
-                    if (tg[r] == g) {           // if the target in that relationship is the gene of interest
-                        for (u in 1:UTF) {              // for each index value in the length of the number of unique tfs
-                            if uniqtf[u] == tf[r] {     // use that index to grab the tf from uniqtfs (which is a necessary mapping for tfa_matrix below
-                                pred_p[n,g]=pred_p[n,g] + tfa_matrix[n,u] * moa[r] * lkly[r];
-                            }
-                        }
+                pred_p[n, g]=0;                 // initialize the pred_p's to 0
+            }
+        }
+                
+        for (r in 1:R) {                // for each tf-target relationship
+            if (tg[r] == g) {           // if the target in that relationship is the gene of interest
+                for (u in 1:UTF) {              // for each index value in the length of the number of unique tfs
+                    if uniqtf[u] == tf[r] {     // use that index to grab the tf from uniqtfs (which is a necessary mapping for tfa_matrix below
+                        pred_p[n,g]=pred_p[n,g] + tfa_matrix[n,u] * moa[r] * lkly[r];
                     }
                 }
             }

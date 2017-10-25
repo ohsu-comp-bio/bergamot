@@ -1,15 +1,10 @@
-# a script for translating regulons with ENTREZID identifiers to ENSEMBL. Regulons
-# are generated from aracne.networks package (v.1.2.0).
-# aracne.networks usage https://bioconductor.org/packages/release/data/experiment/manuals/aracne.networks/man/aracne.networks.pdf
-# Run from command line: Rscript translate_regulon.R --args args1
+# a script for translating TCGA expression datasets with ENSEMBL identifiers to ENTREZ. 
+# Run from command line: Rscript translate_tcga.R --args args1
 # where arg1= TCGA cohort (i.e. TCGA-BRCA)
-# Title     : Generate TCGA NCBI geneID to ENTREZID
-# Objective : Convert NCBI geneID labeled TCGA expression data to ENTREZID
+# Title     : Translate TCGA NCBI/ENSEMBL geneID to ENTREZID
+# Objective : Convert NCBI/ENSEMBL geneID labeled TCGA expression data to ENTREZID
 # Created by: Joey Estabrook
 # Created on: 9/21/17
-
-
-
 
 suppressMessages(require(AnnotationDbi))
 suppressMessages(require(org.Hs.eg.db))

@@ -12,6 +12,7 @@ Authors: Michal Grzadkowski <grzadkow@ohsu.edu>
 """
 
 from .expression import *
+from .proteomics import *
 from .variants import *
 from .copies import get_copies_firehose
 # from .drugs import get_expr_ioria, get_drug_ioria
@@ -1073,4 +1074,144 @@ class TransferDreamCohort(TransferCohort):
 
         return self.test_prot.loc[samps, use_genes]
 
-    # todo: include TransferTFActivityCohort when it's halfway presentable
+
+class TFActivityCohort(TransferCohort):
+    """An associated expression, rppa, and regulatory network dataset
+    used to assess the activity of each transcription factor in a
+    given sample.
+
+        Args:
+            drug_names (:obj:`list` of :obj:`str`):
+                Which drugs to include as phenotypes.
+
+        Attributes:
+            train_samps_(frozenset of str)
+            test_samps_ (frozenset of str)
+            train_expr_ (pandas DataFrame of floats)
+            test_expr_ (pandas DataFrame of floats)
+            train_prot (pandas DataFrame of floats)
+            test_prot (pandas DataFrame of floats)
+
+        Examples:
+
+    """
+
+
+    def __init__(self,
+                 cohort,
+                 cv_seed=0,
+                 cv_prop=0.8):
+
+        # gets the prediction features
+        # todo: make get_rppa_firehose only take cohort as input
+        rna_mat = get_expr_bmeg(cohort)
+        prot_mat = get_rppa_firehose(cohort, data_dir)
+        regul_mat = load_regul_from_file(cohort)
+
+        # rename columns in omic matrices to be ENSEMBL gene names
+        # todo: when regulon files are available, will we need to parse their names as below?
+        rna_mat.columns = [colname.split('__')[-1] for colname in rna_mat.columns]
+        prot_mat.columns = [colname.split('__')[-1] for colname in prot_mat.columns]
+
+        # if a gene is present in prot_mat but not in rna_mat, add that gene to rna_mat
+        # (with zeros as values)
+        # todo: is this a better plan than cutting prot_mat down to size?
+        for gn in set(prot_mat.columns) - set(rna_mat.columns):
+            rna_mat[gn] = 0
+
+        # get set of samples for which we have both rna and rppa data
+        use_samples = (set(rna_mat.index) & set(prot_mat.index))
+
+        # todo: check for use_genes shadow variable
+        # todo: apply this (is there an existing method?)
+        # self.use_genes = (set(rna_mat.columns) & set(prot_mat.columns)
+        #           & set(uniq_in_regul))
+
+        # get names of training and testing samples
+        train_samps, test_samps = self.split_samples(cv_seed, cv_prop, use_samples)
+
+        self.regulons = regul_mat
+        # each is a pd.Series. Order matters. Redundancy is key.
+        # self.regulators = regul_mat['Regulators']
+        # self.targets = regul_mat['Targets']
+        # self.moas = regul_mat['MoA']
+        # self.likelihood = regul_mat['likelihood']
+
+        # split the protein abundances into training/testing sub-cohorts
+        self.train_prot = prot_mat.loc[train_samps, :]
+        if test_samps:
+            self.test_prot = prot_mat.loc[test_samps, :]
+        else:
+            # todo: should self.test_prot be set to None?
+            test_samps = None
+
+        TransferCohort.__init__(self,
+                                {'rna': rna_mat, 'rppa': prot_mat},
+                                train_samps, test_samps, cohort, cv_seed)
+
+    # verify that in (another part of the code) he sets train_data with
+    # include_samps and exclude_samps
+    # todo: should these defs be moved up a level?
+    # (they are nearly identical in this class and TransferDreamCohort)
+    def train_data(self,
+                   pheno,
+                   include_samps=None, exclude_samps=None,
+                   include_genes=None, exclude_genes=None):
+        """Retrieval of the training cohort from the -omic dataset."""
+
+        samps = self.subset_samps(include_samps, exclude_samps,
+                                  use_test=False)
+
+        genes = self.subset_genes(include_genes, exclude_genes)
+
+        pheno_vec = self.train_pheno(pheno, samps)
+        nan_stat = np.any(~np.isnan(pheno_vec), axis=1)
+        samps = np.array(samps)[nan_stat]
+
+        # todo: include the use_genes logic (applied in train_pheno) here?
+
+        return self.omic_loc(samps, genes), pheno_vec.loc[nan_stat, :]
+
+    def test_data(self,
+                  pheno,
+                  include_samps=None, exclude_samps=None,
+                  include_genes=None, exclude_genes=None):
+        """Retrieval of the testing cohort from the -omic dataset."""
+
+        samps = self.subset_samps(include_samps, exclude_samps,
+                                  use_test=True)
+        genes = self.subset_genes(include_genes, exclude_genes)
+
+        pheno_vec = self.test_pheno(pheno, samps)
+        nan_stat = np.any(~np.isnan(pheno_vec), axis=1)
+        samps = np.array(samps)[nan_stat]
+
+        # todo: how to include the use_genes logic applied in test_pheno here?
+
+        return self.omic_loc(samps, genes), pheno_vec.loc[nan_stat, :]
+
+    def train_pheno(self, gene_list, samps=None):
+        if samps is None:
+            samps = self.train_samps
+
+        # todo: where is gene_list specified and what is it doing? change else statement?
+        # todo: why is use_genes specified here and also in multi_tfactivity?
+        if gene_list == 'inter':
+            use_genes = self.use_genes
+
+        else:
+            use_genes = self.train_prot.columns
+
+        return self.train_prot.loc[samps, use_genes]
+
+    def test_pheno(self, gene_list, samps=None):
+        if samps is None:
+            samps = self.test_samps
+
+        if gene_list == 'inter':
+            use_genes = (self.use_genes)
+
+        else:
+            use_genes = self.test_prot.columns
+
+        return self.test_prot.loc[samps, use_genes]
