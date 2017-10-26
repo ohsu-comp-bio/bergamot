@@ -191,10 +191,10 @@ model_code_tf = """
     }
 
     parameters {
-        matrix<lower=0, upper=1>[N, UTF] tfa_matrix;      // does this need to be a transformed parameter
+        matrix<lower=0, upper=1>[N, UTF] tfa_matrix;      // does this need to be a transformed parameter?
 
         vector<lower=0, upper=1>[UTF] alpha;              // make more informative? add priors in models?
-        vector<lower=0, upper=1>[UTF] beta;               // ''
+        vector<lower=0, upper=1>[UTF] beta;               // '', also, "vector" sets type to real
 
         // other parameters?
 
@@ -203,18 +203,17 @@ model_code_tf = """
     transformed_parameters {
         matrix[N, G] pred_p;
 
-        // yikes
         for (G in 1:G) {                        // for each gene
             for (n in 1:N) {                    // for each sample
                 pred_p[n, g]=0;                 // initialize the pred_p's to 0
             }
         }
-                
+
         for (r in 1:R) {                // for each tf-target relationship
             if (tg[r] == g) {           // if the target in that relationship is the gene of interest
                 for (u in 1:UTF) {              // for each index value in the length of the number of unique tfs
-                    if uniqtf[u] == tf[r] {     // use that index to grab the tf from uniqtfs (which is a necessary mapping for tfa_matrix below
-                        pred_p[n,g]=pred_p[n,g] + tfa_matrix[n,u] * moa[r] * lkly[r];
+                    if uniqtf[u] == tf[r] {     // use that index to grab the tf from uniqtfs (which is a necessary mapping for tfa_matrix below)
+                        pred_p[n,g] = pred_p[n,g] + tfa_matrix[n,u] * moa[r] * lkly[r];     // how to handle negative moa?
                     }
                 }
             }
