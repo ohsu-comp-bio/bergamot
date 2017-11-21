@@ -43,6 +43,12 @@ def get_copies_firehose(cohort, data_dir):
     copy_data = pd.read_csv(BytesIO(copy_fl.read()),
                             sep='\t', index_col=0, engine='python')
     copy_data = copy_data.iloc[:, 2:].transpose().fillna(0.0)
+    copy_data.columns = [gn.split('|')[0] if isinstance(gn, str) else gn
+	for gn in copy_data.columns]
+    copy_data = copy_data.iloc[:,copy_data.columns != '?']
+    
+    copy_data.index = ["-".join(x[:4])
+	for x in copy_data.index.str.split('-')]
 
     return copy_data
 

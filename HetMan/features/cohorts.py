@@ -17,7 +17,7 @@ from .variants import *
 from .copies import get_copies_firehose
 # from .drugs import get_expr_ioria, get_drug_ioria
 from .dream import get_dream_data
-
+from .tfa import get_tfa_data
 from .pathways import *
 from .annot import get_gencode
 
@@ -1213,5 +1213,100 @@ class TFActivityCohort(TransferCohort):
 
         else:
             use_genes = self.test_prot.columns
+
+        return self.test_prot.loc[samps, use_genes]
+
+
+class TFACohort(TransferCohort):
+    """A cohort for PRECEPTS III/IV, associating expression, CNA, and regulatory network used to
+    assess the activity of each transcription factor in a given samples
+    """
+
+    def __init__(self,
+                 cohort, intx_types=None, cv_seed=0, cv_prop=0.8, dir='/home/exacloud/lustre1/CompBio/mgrzad/input-data/firehose/'):
+
+        # gets the prediction features and the abundances to predict
+        rna_mat = get_expr_firehose(cohort, dir)
+        cna_mat = get_expr_firehose(cohort, dir)
+        tfa_mat = get_tfa_data()
+
+        # gets the samples that are common between the datasets, get the
+        # training/testing cohort split
+        use_samples = (set(rna_mat.index) & set(cna_mat.index)
+                       & set(tfa_mat.index))
+        train_samps, test_samps = self.split_samples(
+            cv_seed, cv_prop, use_samples)
+
+        # subsets the proteomic dataset for genes that pass the missing value
+        # threshold and gets the pathway interactions for these genes
+        self.path = get_type_networks(intx_types, tfa_mat.columns)
+
+        for gn in set(tfa_mat.columns) - set(rna_mat.columns):
+            rna_mat[gn] = 0
+
+        for gn in set(tfa_mat.columns) - set(cna_mat.columns):
+            cna_mat[gn] = 0
+
+        # splits the protein abundances into training/testing sub-cohorts
+        self.train_prot = tfa_mat.loc[train_samps, :]
+        if test_samps:
+            self.test_prot = tfa_mat.loc[test_samps, :]
+        else:
+            test_samps = None
+
+        TransferCohort.__init__(self,
+                                {'rna': rna_mat, 'cna': cna_mat},
+                                train_samps, test_samps, cohort, cv_seed)
+
+    def train_data(self,
+                   pheno,
+                   include_samps=None, exclude_samps=None,
+                   include_genes=None, exclude_genes=None):
+        """Retrieval of the training cohort from the -omic dataset."""
+
+        samps = self.subset_samps(include_samps, exclude_samps,
+                                  use_test=False)
+        genes = self.subset_genes(include_genes, exclude_genes)
+
+        pheno_vec = self.train_pheno(pheno, samps)
+        nan_stat = np.any(~np.isnan(pheno_vec), axis=1)
+        samps = np.array(samps)[nan_stat]
+
+        return self.omic_loc(samps, genes), pheno_vec.loc[nan_stat, :]
+
+
+    def test_data(self,
+                  pheno,
+                  include_samps=None, exclude_samps=None,
+                  include_genes=None, exclude_genes=None):
+        """Retrieval of the testing cohort from the -omic dataset."""
+
+        samps = self.subset_samps(include_samps, exclude_samps,
+                                  use_test=True)
+        genes = self.subset_genes(include_genes, exclude_genes)
+
+        pheno_vec = self.test_pheno(pheno, samps)
+        nan_stat = np.any(~np.isnan(pheno_vec), axis=1)
+        samps = np.array(samps)[nan_stat]
+
+        return self.omic_loc(samps, genes), pheno_vec.loc[nan_stat, :]
+
+    def train_pheno(self, gene_list, samps=None):
+        if samps is None:
+            samps = self.train_samps
+
+        if gene_list == 'inter':
+            use_genes = (self.genes['rna'] & self.genes['cna']
+                         & set(self.train_prot.columns))
+
+        return self.train_prot.loc[samps, use_genes]
+
+    def test_pheno(self, gene_list, samps=None):
+        if samps is None:
+            samps = self.test_samps
+
+        if gene_list == 'inter':
+            use_genes = (self.genes['rna'] & self.genes['cna']
+                         & set(self.test_prot.columns))
 
         return self.test_prot.loc[samps, use_genes]
