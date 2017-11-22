@@ -288,4 +288,58 @@ tfa_model_code = """
                 p[n, g] ~ normal(pred_p[n, g], 0.01);
             }
         }
-    }"""
+    }
+"""
+
+
+tfa_hier_stan_spec = """
+
+    /* Spec for hierarchical regression linear model */
+
+    data {                                 
+        int<lower=0> N;                         // count of observations
+        int<lower=0> K;                         // count of exog features
+        matrix[N, K] X;                         // exog features
+        vector[N] y;                            // endog feature 
+
+        int<lower=0> n_patient;                      // count of patient index levels
+        int<lower=1, upper=n_patient> patient_enc[N]; // patient index encoding  
+
+        int<lower=0> n_tf;                     // count of tf index levels
+        int<lower=1, upper=n_tf> tf_enc[N];   // tf index encoding          
+
+        int<lower=1, upper=n_tf> tf_patient_map[n_tf];
+    }
+    parameters {
+        vector[K] beta;                         // exog coeffs
+        real<lower=0> sigma;                    // linear model error       
+
+        real patient_mu;                         // patient mu hyperprior
+        real<lower=0> patient_sd;                // patient sd hyperprior
+
+        vector [n_patient] b0_patient;            // tf mu hyperprior (patient prior)
+        real<lower=0> tf_sd;                   // tf sd hyperprior
+
+        vector[n_tf] b0_tf;                   // tf prior
+    }
+    transformed parameters {}
+    model {  
+
+        patient_mu ~ normal(0, 10);              // weakly informative
+        patient_sd ~ cauchy(0, 10);              // weakly informative
+        tf_sd ~ cauchy(0, 10);                 // weakly informative
+
+
+        for (patient in 1:n_patient) {            // patient priors 
+              b0_patient[patient] ~ normal(patient_mu, patient_sd);
+        }
+
+        for (tf in 1:n_tf) {                  // tf priors 
+            b0_tf[tf] ~ normal(b0_patient[tf_patient_map[tf]], tf_sd);
+        }      
+
+        sigma ~ cauchy(0, 10);                  // weakly informative noise
+        y ~ student_t(1, b0_tf[tf_enc] + X * beta, sigma);    // likelihood
+    }
+
+"""
