@@ -1255,7 +1255,7 @@ class TFACohort(TransferCohort):
             test_samps = None
 
         TransferCohort.__init__(self,
-                                {'rna': rna_mat, 'cna': cna_mat},
+                                {'rna': rna_mat, 'cna': cna_mat, 'tfa':tfa_mat},
                                 train_samps, test_samps, cohort, cv_seed)
 
     def train_data(self,
