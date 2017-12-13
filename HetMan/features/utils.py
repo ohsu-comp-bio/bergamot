@@ -4,6 +4,9 @@
 Author: Michal Grzadkowski <grzadkow@ohsu.edu>
 
 """
+import sys
+
+sys.path.extend(['/home/exacloud/lustre1/CompBio/estabroj/bergamot/ophion/client/python/'])
 
 from ophion import Ophion
 

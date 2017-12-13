@@ -18,6 +18,7 @@ from .copies import get_copies_firehose
 # from .drugs import get_expr_ioria, get_drug_ioria
 from .dream import get_dream_data
 from .tfa import get_tfa_data
+from .OV_JHU import *
 from .pathways import *
 from .annot import get_gencode
 
@@ -979,17 +980,21 @@ class TransferDreamCohort(TransferCohort):
                  syn, cohort, intx_types=None, cv_seed=0, cv_prop=0.8):
 
         # gets the prediction features and the abundances to predict
-        rna_mat = get_dream_data(syn, cohort, 'rna')
-        cna_mat = get_dream_data(syn, cohort, 'cna')
-        prot_mat = get_dream_data(syn, cohort, 'prot', source='JHU')
+        #rna_mat = get_dream_data(syn, cohort, 'rna')
+        #cna_mat = get_dream_data(syn, cohort, 'cna')
+        #prot_mat = get_dream_data(syn, cohort, 'prot', source='JHU')
 
+        prot_mat,cna_mat,rna_mat = get_pnnl('/home/exacloud/lustre1/CompBio/estabroj/data/OV','JHU')
         # parses the column names of the -omic matrices to get gene names
-        rna_mat.columns = [col.split('__')[-1] for col in rna_mat.columns]
-        cna_mat.columns = [col.split('__')[-1] for col in cna_mat.columns]
-        prot_mat.columns = [col.split('__')[-1] for col in prot_mat.columns]
+        #rna_mat.columns = [col.split('__')[-1] for col in rna_mat.columns]
+        #cna_mat.columns = [col.split('__')[-1] for col in cna_mat.columns]
+        #prot_mat.columns = [col.split('__')[-1] for col in prot_mat.columns]
 
         # gets the samples that are common between the datasets, get the
         # training/testing cohort split
+        prot_mat = prot_mat.astype(float)
+        cna_mat = cna_mat.astype(float)
+        rna_mat = rna_mat.astype(float)
         use_samples = (set(rna_mat.index) & set(cna_mat.index)
                        & set(prot_mat.index))
         train_samps, test_samps = self.split_samples(
@@ -1000,10 +1005,10 @@ class TransferDreamCohort(TransferCohort):
         self.path = get_type_networks(intx_types, prot_mat.columns)
 
         for gn in set(prot_mat.columns) - set(rna_mat.columns):
-            rna_mat[gn] = 0
+            rna_mat[gn] = 0.0
 
         for gn in set(prot_mat.columns) - set(cna_mat.columns):
-            cna_mat[gn] = 0
+            cna_mat[gn] = 0.0
 
         # splits the protein abundances into training/testing sub-cohorts
         self.train_prot = prot_mat.loc[train_samps, :]
@@ -1013,7 +1018,7 @@ class TransferDreamCohort(TransferCohort):
             test_samps = None
 
         TransferCohort.__init__(self,
-                                {'rna': rna_mat, 'cna': cna_mat},
+                                {'rna': rna_mat, 'cna': cna_mat, 'prot':prot_mat},
                                 train_samps, test_samps, cohort, cv_seed)
 
     def train_data(self,
@@ -1223,13 +1228,27 @@ class TFACohort(TransferCohort):
     """
 
     def __init__(self,
-                 cohort, intx_types=None, cv_seed=0, cv_prop=0.8, dir='/home/exacloud/lustre1/CompBio/mgrzad/input-data/firehose/'):
-
+                 cohort, regulator, intx_types=None, cv_seed=0, cv_prop=0.8, dir='/home/exacloud/lustre1/CompBio/mgrzad/input-data/firehose/'):
+        neighb = get_gene_neighbourhood([regulator])
+        indx = np.array(list(neighb[regulator]['Down'][intx_types[0]]).insert(0,regulator))
         # gets the prediction features and the abundances to predict
-        rna_mat = get_expr_firehose(cohort, dir)
-        cna_mat = get_expr_firehose(cohort, dir)
-        tfa_mat = get_tfa_data()
 
+        rna_mat = get_expr_firehose(cohort, dir).astype(float)
+        rna_mat = rna_mat.loc[:,(rna_mat!=0).any(axis=0)]
+        #subset_r = list(rna_mat.sample(20).index)
+        #subset_c = list(rna_mat.sample(300,axis=1).columns)
+        #rna_mat = rna_mat.loc[subset_r,subset_c]
+        rna_mat = rna_mat.loc[:,indx]
+
+        cna_mat = get_expr_firehose(cohort, dir).astype(float)
+        cna_mat = cna_mat.loc[:,(cna_mat!=0).any(axis=0)]
+        #cna_mat = cna_mat.loc[subset_r,subset_c]
+        cna_mat = cna_mat.loc[:,indx]
+
+        tfa_mat = get_tfa_data().astype(float)
+        tfa_mat = tfa_mat.loc[:,(tfa_mat!=0).any(axis=0)]
+        #tfa_mat = tfa_mat.loc[subset_r,subset_c]
+        tfa_mat = tfa_mat.loc[:,indx].fillna(0.0)
         # gets the samples that are common between the datasets, get the
         # training/testing cohort split
         use_samples = (set(rna_mat.index) & set(cna_mat.index)
@@ -1310,3 +1329,85 @@ class TFACohort(TransferCohort):
                          & set(self.test_prot.columns))
 
         return self.test_prot.loc[samps, use_genes]
+
+
+class TFAValueCohort(ValueCohort, UniCohort):
+    """A cohort to predict continuous TFA predictions based on gene expression.
+    Args:
+        omic_type (str): Which -omic datasets to use as prediction features.
+    See Also:
+    """
+
+    def __init__(self,
+                 cohort, omic_type='rna', cv_seed=0, cv_prop=0.8, dir='/home/exacloud/lustre1/CompBio/mgrzad/input-data/firehose/'):
+
+        # gets the prediction features and the abundances to predict
+        feat_mat = get_expr_firehose(cohort, dir).astype(float)
+        prot_mat = get_tfa_data().astype(float)
+
+        # filters out genes that have both low levels of expression
+        # and low variance of expression
+        feat_mean = np.mean(feat_mat)
+        feat_var = np.var(feat_mat)
+        feat_mat = feat_mat.loc[
+            :, ((feat_mean > np.percentile(feat_mean, 10))
+                | (feat_var > np.percentile(feat_var, 10)))
+            ]
+
+        # gets the samples that are common between the datasets, get the
+        # training/testing cohort split
+        use_samples = set(feat_mat.index) & set(prot_mat.index)
+        train_samps, test_samps = self.split_samples(
+            cv_seed, cv_prop, use_samples)
+
+        # splits the protein abundances into training/testing sub-cohorts
+        self.train_prot = prot_mat.loc[train_samps, :]
+        if test_samps:
+            self.test_prot = prot_mat.loc[test_samps, :]
+        else:
+            test_samps = None
+
+        self.mut_genes = None
+        self.path = None
+
+        super().__init__(feat_mat, train_samps, test_samps, cohort, cv_seed)
+
+    def train_pheno(self, prot_gene, samps=None):
+        if samps is None:
+            samps = self.train_samps
+
+        return self.train_prot.loc[samps, prot_gene]
+
+    def test_pheno(self, prot_gene, samps=None):
+        if samps is None:
+            samps = self.test_samps
+
+        return self.test_prot.loc[samps, prot_gene]
+
+    def train_data(self,
+                   pheno,
+                   include_samps=None, exclude_samps=None,
+                   include_genes=None, exclude_genes=None):
+        if isinstance(pheno, str):
+            pheno = [pheno]
+
+        self.mut_genes = [ph.split('__')[-1] for ph in pheno]
+        self.path = get_gene_neighbourhood(self.mut_genes)
+
+        return super().train_data(pheno,
+                                  include_samps, exclude_samps,
+                                  include_genes, exclude_genes)
+
+    def test_data(self,
+                  pheno,
+                  include_samps=None, exclude_samps=None,
+                  include_genes=None, exclude_genes=None):
+        if isinstance(pheno, str):
+            pheno = [pheno]
+
+        self.mut_genes = [ph.split('__')[-1] for ph in pheno]
+        self.path = get_gene_neighbourhood(self.mut_genes)
+
+        return super().test_data(pheno,
+                                 include_samps, exclude_samps,
+                                 include_genes, exclude_genes)

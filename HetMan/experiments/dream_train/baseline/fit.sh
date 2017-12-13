@@ -9,14 +9,16 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem-per-cpu=4000
 
-#SBATCH --output=/home/exacloud/lustre1/CompBio/mgrzad/slurm/log-files/dream-fit_out-%A.txt
-#SBATCH --error=/home/exacloud/lustre1/CompBio/mgrzad/slurm/log-files/dream-fit_err-%A.txt
+#SBATCH --output=/home/users/estabroj/scratch/slurm/log-files/TFA-fit_out-%A.txt
+#SBATCH --error=/home/users/estabroj/scratch/slurm/log-files/TFA-fit_err-%A.txt
 #SBATCH --verbose
 
 
 # move to the working directory, find where to place output
-cd ~/compbio/bergamot
-TEMPDIR=HetMan/experiments/dream_train/baseline/output/$cohort/$input/$classif
+cd /home/users/estabroj/scratch/bergamot
+source activate visions
+
+TEMPDIR=HetMan/experiments/predict_TFA/baseline/output/$cohort/$input/$classif
 
 # disable threading on each CPU, print info about this array job
 export OMP_NUM_THREADS=1
@@ -34,6 +36,6 @@ task_id=$(($SLURM_ARRAY_TASK_ID % 20));
 srun -p=exacloud \
 	--output=$TEMPDIR/slurm/fit-${cv_id}_${task_id}.txt \
 	--error=$TEMPDIR/slurm/fit-${cv_id}_${task_id}.err \
-	python HetMan/experiments/dream_train/baseline/fit.py \
+	python HetMan/experiments/predict_TFA/baseline/fit.py \
 	$cohort $input $classif $cv_id $task_id
 

@@ -1,16 +1,16 @@
 #!/bin/bash
 
-#SBATCH --job-name=dream-train
+#SBATCH --job-name=TFA-train
 #SBATCH --partition=exacloud
 #SBATCH --mem=2000
 #SBATCH --time=20
 
-#SBATCH --output=/home/exacloud/lustre1/CompBio/mgrzad/slurm/log-files/dream-train_%j.out
-#SBATCH --error=/home/exacloud/lustre1/CompBio/mgrzad/slurm/log-files/dream-train_%j.err
+#SBATCH --output=/home/users/estabroj/scratch/slurm/log-files/TFA-train_%j.out
+#SBATCH --error=/home/users/estabroj/scratch/slurm/log-files/TFA-train_%j.err
 #SBATCH --verbose
 
 
-cd ~/compbio/bergamot
+cd /home/users/estabroj/scratch/bergamot
 source activate visions
 
 # finds the name of the TCGA cohort to use
@@ -36,7 +36,7 @@ fi
 
 # gets the output directory where results will be saved,
 # removing it if it already exists
-TEMPDIR=HetMan/experiments/dream_train/baseline/output/$cohort/$input/$classif
+TEMPDIR=HetMan/experiments/predict_TFA/baseline/output/$cohort/$input/$classif
 echo $TEMPDIR
 rm -rf $TEMPDIR
 
@@ -46,8 +46,8 @@ mkdir -p $TEMPDIR/results
 
 srun -p=exacloud \
 	--output=$TEMPDIR/slurm/setup.txt --error=$TEMPDIR/slurm/setup.err \
-	python HetMan/experiments/dream_train/baseline/setup.py \
+	python HetMan/experiments/predict_TFA/baseline/setup.py \
 	$cohort $input $classif
 
-sbatch HetMan/experiments/dream_train/baseline/fit.sh
+sbatch HetMan/experiments/predict_TFA/baseline/fit.sh
 

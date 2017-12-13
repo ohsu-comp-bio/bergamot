@@ -44,7 +44,7 @@ def get_rppa_firehose(cohort, data_dir):
 		expr_data (pandas DataFrame of float), shape = [n_samps, n_feats]
 	Examples:
 		>>> rppa_data = get_rppa_firehose(
-		>>>		'BRCA', '/home/users/grzadkow/compbio/input-data/firehose')
+		>>>		'BRCA', '/home/exacloud/lustre1/CompBio/mgrzad/input-data/firehose')
 		>>> rppa_data = get_rppa_firehose('SKCM', '../firehose')
 	"""
 	expr_tar = tarfile.open(glob.glob(os.path.join(data_dir, "stddata__2016_07_15", cohort, "20160715","*Merge_protein_exp_*protein_normalization*.Level_3*.tar.gz"))[0])

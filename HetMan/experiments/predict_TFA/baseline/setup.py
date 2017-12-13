@@ -13,9 +13,8 @@ base_dir = os.path.dirname(__file__)
 import sys
 sys.path.extend([os.path.join(base_dir, '../../../..')])
 
-from HetMan.features.cohorts import DreamCohort
+from HetMan.features.cohorts import TFAValueCohort
 
-import synapseclient
 import dill as pickle
 
 
@@ -29,15 +28,10 @@ def main(argv):
 
     # load the expression data and the gene's mutation data
     # for the given cohort
-    syn = synapseclient.Synapse()
-    syn.cache.cache_root_dir = ("/home/exacloud/lustre1/CompBio/"
-                                "mgrzad/input-data/synapse")
-
-    syn.login()
-    cdata = DreamCohort(syn, argv[0], cv_prop=1.0)
+    cdata = TFAValueCohort( argv[0], cv_prop=1.0)
 
     # save the list of sub-types to file
-    pickle.dump(list(sorted(cdata.train_prot.columns)),
+    pickle.dump(['AR'],#list(sorted(cdata.train_prot.columns)),
                 open(os.path.join(out_path, 'tmp/gene_list.p'), 'wb'))
 
 

@@ -12,7 +12,7 @@
 
 
 cd /home/users/estabroj/scratch/bergamot
-source activate paulie
+source activate visions
 
 # finds the name of the TCGA cohort to use
 if [ -z ${cohort+x} ]
@@ -31,10 +31,11 @@ rm -rf $TEMPDIR
 mkdir -p $TEMPDIR/slurm
 mkdir -p $TEMPDIR/tmp
 mkdir -p $TEMPDIR/results
-
-intx_list=('controls-expression-of' 'controls-phosphorylation-of' 'controls-state-change-of')
+tf=$1 
+export regulator=$tf
+intx_list=('controls-expression-of','controls-phosphorylation-of' 'controls-state-change-of')
 for intx_use in "${intx_list[@]}";
-	do export intx=$intx_use;
+        do export intx=$intx_use;
 	sbatch HetMan/experiments/predict_TFA/stan/run_cv.sh;
 done;
 

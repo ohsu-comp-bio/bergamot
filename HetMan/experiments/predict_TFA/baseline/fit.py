@@ -17,12 +17,11 @@ base_dir = os.path.dirname(__file__)
 import sys
 sys.path.extend([os.path.join(base_dir, '../../../..')])
 
-from HetMan.features.cohorts import DreamCohort
+from HetMan.features.cohorts import TFAValueCohort
 from HetMan.predict.pipelines import ProteinPipe
 import HetMan.predict.regressors as regr
 
 import dill as pickle
-import synapseclient
 
 
 # machine learning pipelines for predicting proteomic levels from -omics data
@@ -50,21 +49,13 @@ def main(argv):
 
     # creates the directory where the results will be stored, loads the list
     # of genes to predict the proteomic levels of and the learning pipeline
-    out_dir = os.path.join(base_dir, 'output', argv[0], argv[1], argv[2])
-    gene_list = pickle.load(
-        open(os.path.join(out_dir, 'tmp', 'gene_list.p'), 'rb'))
+    out_dir = os.path.join(base_dir, 'output', argv[0], argv[1], argv[2], argv[5])
+    #gene_list = pickle.load(
+    #    open(os.path.join(out_dir, 'tmp', 'gene_list.p'), 'rb'))
+    gene_list = [argv[5]]
     regr_cls = eval(argv[2])
 
-    # gets a Synapse client instance, points to the directory where the
-    # downloaded datasets and login credentials are to be stored
-    syn = synapseclient.Synapse()
-    syn.cache.cache_root_dir = ("/home/exacloud/lustre1/CompBio/"
-                                "mgrzad/input-data/synapse")
-
-    # logs into Synapse, loads the challenge data with a training/testing
-    # cohort split defined by the cross-validation ID
-    syn.login()
-    cdata = DreamCohort(syn, cohort=argv[0], omic_type=argv[1],
+    cdata = TFAValueCohort(cohort=argv[0], omic_type=argv[1],
                         cv_seed=(int(argv[3]) + 3) * 37)
 
     # for each gene whose proteomic levels are to be predicted, check if it
