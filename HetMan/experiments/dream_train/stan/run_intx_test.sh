@@ -6,12 +6,12 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 
-#SBATCH --output=/home/exacloud/lustre1/CompBio/mgrzad/slurm/log-files/dream-stan-intx_%j.out
-#SBATCH --error=/home/exacloud/lustre1/CompBio/mgrzad/slurm/log-files/dream-stan-intx_%j.err
+#SBATCH --output=/home/exacloud/lustre1/CompBio/estabroj/slurm/log-files/dream-stan-intx_%j.out
+#SBATCH --error=/home/exacloud/lustre1/CompBio/estabroj/slurm/log-files/dream-stan-intx_%j.err
 #SBATCH --verbose
 
 
-cd ~/compbio/bergamot
+cd /home/exacloud/lustre1/CompBio/estabroj/bergamot
 source activate visions
 
 # finds the name of the TCGA cohort to use

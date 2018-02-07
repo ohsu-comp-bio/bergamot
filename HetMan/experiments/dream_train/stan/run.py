@@ -4,6 +4,8 @@ base_dir = os.path.dirname(__file__)
 
 import sys
 sys.path.extend([os.path.join(base_dir, '../../../..')])
+sys.path.extend(['/home/exacloud/lustre1/CompBio/estabroj/bergamot/ophion/client/python/'])
+
 
 import synapseclient
 import dill as pickle

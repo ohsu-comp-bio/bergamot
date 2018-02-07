@@ -10,6 +10,7 @@ Author: Michal Grzadkowski <grzadkow@ohsu.edu>
 
 """
 
+import sys
 from ophion import Ophion
 import numpy as np
 

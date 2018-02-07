@@ -9,13 +9,13 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem-per-cpu=16000
 
-#SBATCH --output=/home/exacloud/lustre1/CompBio/mgrzad/slurm/log-files/dream-stan-cv_out-%A.txt
-#SBATCH --error=/home/exacloud/lustre1/CompBio/mgrzad/slurm/log-files/dream-stan-cv_err-%A.txt
+#SBATCH --output=/home/exacloud/lustre1/CompBio/estabroj/slurm/log-files/dream-stan-cv_out-%A.txt
+#SBATCH --error=/home/exacloud/lustre1/CompBio/estabroj/slurm/log-files/dream-stan-cv_err-%A.txt
 #SBATCH --verbose
 
 
 # move to the working directory, find where to place output
-cd ~/compbio/bergamot
+cd /home/exacloud/lustre1/CompBio/estabroj/bergamot
 TEMPDIR=HetMan/experiments/dream_train/stan/output/intx/$cohort
 
 # get the cross-validation ID defined by this job's SLURM array ID
