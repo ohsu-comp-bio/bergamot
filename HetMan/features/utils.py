@@ -8,7 +8,7 @@ Author: Michal Grzadkowski <grzadkow@ohsu.edu>
 
 """
 
-from ophion import Ophion
+#from ophion import Ophion
 import os
 
 import numpy as np

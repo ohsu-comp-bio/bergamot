@@ -18,7 +18,7 @@ import tarfile
 from io import BytesIO
 
 import json
-from ophion import Ophion
+#from ophion import Ophion
 
 
 def get_expr_bmeg(cohort):

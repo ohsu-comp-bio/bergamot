@@ -8,4 +8,5 @@ HetMan/experiments/*/output
 HetMan/experiments/*/*/output*
 HetMan/experiments/*/plots
 HetMan/experiments/*/*/plots
+HetMan/demos/.ipynb_checkpoints
 
