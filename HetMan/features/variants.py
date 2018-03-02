@@ -325,27 +325,39 @@ class MuTree(object):
 
     @staticmethod
     def muts_type(muts):
-        """Parses mutations according to Type, which can be 'CNV' (Gain or
-           Loss), 'Point' (missense and silent mutations), or 'Frame' (indels,
-           frameshifts, nonsense mutations).
+        """Parses mutations according to "Type", which can be 'CN_Gain',
+           'CN_Loss', 'Point' (nonsense, missense and silent single-
+           nucleotide mutations), or 'Frame' (indels, frameshifts, etc.)
 
         """
         new_muts = {}
 
-        cnv_indx = muts['Form'].isin(
-            ['HomDel', 'HetDel', 'HetGain', 'HomGain'])
-        point_indx = muts['Protein'].str.match(
-            pat='^p\\.[A-Z][0-9]+[A-Z]$', as_indexer=True, na=False)
-        frame_indx = muts['Protein'].str.match(
-            pat='^p\\..*(?:\\*|(?:ins|del))', as_indexer=True, na=False)
-        other_indx = ~(cnv_indx | point_indx | frame_indx)
+        # CNAs are identified by special values in the `Form` field
+        gain_indx = muts['Form'].isin(['HetGain', 'HomGain'])
+        if any(gain_indx):
+            new_muts['CN_Gain'] = muts.loc[gain_indx, :]
 
-        if any(cnv_indx):
-            new_muts['CNV'] = muts.loc[cnv_indx, :]
+        loss_indx = muts['Form'].isin(['HomDel', 'HetDel'])
+        if any(loss_indx):
+            new_muts['CN_Loss'] = muts.loc[loss_indx, :]
+
+        # point mutations are identified by looking for single-nucleotide
+        # substitutions in the `Protein` field
+        point_indx = muts['Protein'].str.match(
+            pat='^p\\.[A-Z][0-9]+(?:[A-Z]|\\*)$', na=False)
         if any(point_indx):
             new_muts['Point'] = muts.loc[point_indx, :]
+
+        # frame mutations are identified but looking for a frameshift or
+        # insertions/deletions specified in the `Protein` field
+        frame_indx = muts['Protein'].str.match(
+            pat='^p\\..*(?:fs\\*|(?:ins|del))', na=False)
         if any(frame_indx):
             new_muts['Frame'] = muts.loc[frame_indx, :]
+
+        # anything that doesn't fall in the above three categories is
+        # labelled as an 'Other' type of mutation
+        other_indx = ~(gain_indx | loss_indx | point_indx | frame_indx)
         if any(other_indx):
             new_muts['Other'] = muts.loc[other_indx, :]
 

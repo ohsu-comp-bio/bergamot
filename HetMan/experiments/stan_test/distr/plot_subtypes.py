@@ -7,7 +7,8 @@ import sys
 sys.path.extend([os.path.join(base_dir, '../../../..')])
 
 from HetMan.features.variants import MuType
-from HetMan.features.cohorts.mut import VariantCohort
+from HetMan.features.cohorts.tcga import MutationCohort
+from HetMan.experiments.stan_test.distr.custom_mtypes import mtype_list
 
 import numpy as np
 import pandas as pd
@@ -22,7 +23,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-firehose_dir = '/home/exacloud/lustre1/share_your_data_here/precepts/firehose'
+expr_dir = '/home/exacloud/lustre1/share_your_data_here/precepts/firehose'
+copy_dir = '/home/exacloud/lustre1/CompBio/mgrzad/input-data/firehose'
 
 
 def load_infer_mats(model_name, cohort, gene):
@@ -42,8 +44,14 @@ def plot_label_stability(out_data, args, cdata):
     fig, ax = plt.subplots(figsize=(13, 8))
     kern_bw = (np.max(out_data) - np.min(out_data)) / 40
     mut_clr = sns.hls_palette(1, l=.4, s=.9)[0]
+    
+    if '_' in args.gene:
+        mut_info = args.gene.split('_')
+        use_mtype = MuType({('Gene', mut_info[0]): mtype_list[mut_info[1]]})
 
-    use_mtype = MuType({('Gene', args.gene): None})
+    else:
+        use_mtype = MuType({('Gene', args.gene): None})
+
     mtype_stat = np.array(cdata.train_pheno(use_mtype))
     out_meds = np.percentile(out_data, q=50, axis=1)
 
@@ -79,7 +87,13 @@ def plot_label_variance(out_data, args, cdata):
     mut_cmap = sns.light_palette(sns.hls_palette(1, l=.33, s=.95)[0],
                                  as_cmap=True)
 
-    use_mtype = MuType({('Gene', args.gene): None})
+    if '_' in args.gene:
+        mut_info = args.gene.split('_')
+        use_mtype = MuType({('Gene', mut_info[0]): mtype_list[mut_info[1]]})
+
+    else:
+        use_mtype = MuType({('Gene', args.gene): None})
+
     mtype_stat = np.array(cdata.train_pheno(use_mtype))
     out_means = np.mean(out_data, axis=1)
     out_sds = np.std(out_data, axis=1)
@@ -106,7 +120,14 @@ def plot_label_variance(out_data, args, cdata):
 
 def plot_subtype_violins(out_data, args, cdata, subtypes='Form_base'):
     fig, ax = plt.subplots(figsize=(13, 8))
-    use_mtype = MuType({('Gene', args.gene): None})
+
+    if '_' in args.gene:
+        mut_info = args.gene.split('_')
+        use_mtype = MuType({('Gene', mut_info[0]): mtype_list[mut_info[1]]})
+
+    else:
+        use_mtype = MuType({('Gene', args.gene): None})
+
     out_meds = np.percentile(out_data, q=50, axis=1)
 
     if subtypes is None:
@@ -167,14 +188,17 @@ def main():
                                 '/mgrzad/input-data/synapse')
     syn.login()
 
-    cdata = VariantCohort(
-        cohort=args.cohort, mut_genes=[args.gene],
-        mut_levels=['Gene', 'Form_base', 'Exon'], expr_source='Firehose',
-        data_dir=firehose_dir, syn=syn, cv_prop=1.0
+    cdata = MutationCohort(
+        cohort=args.cohort, mut_genes=[args.gene.split('_')[0]],
+        mut_levels=['Gene', 'Type', 'Form_base', 'Exon'],
+        expr_source='Firehose', expr_dir=expr_dir, copy_source='Firehose',
+        copy_dir=copy_dir, syn=syn, cv_prop=1.0
         )
 
     plot_label_stability(infer_mat, args, cdata)
     plot_label_variance(infer_mat, args, cdata)
+
+    plot_subtype_violins(infer_mat, args, cdata, subtypes='Type')
     plot_subtype_violins(infer_mat, args, cdata, subtypes='Form_base')
     plot_subtype_violins(infer_mat, args, cdata, subtypes='Exon')
 

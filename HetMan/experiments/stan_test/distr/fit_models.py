@@ -6,16 +6,19 @@ import sys
 sys.path.extend([os.path.join(base_dir, '../../../..')])
 
 from HetMan.features.variants import MuType
-from HetMan.features.cohorts.mut import VariantCohort
+from HetMan.features.cohorts.tcga import MutationCohort
 from HetMan.predict.stan_margins.base import StanPipe
+
 from HetMan.experiments.stan_test.distr.stan_models import *
+from HetMan.experiments.stan_test.distr.custom_mtypes import mtype_list
 
 import synapseclient
 import dill as pickle
 import numpy as np
 import argparse
 
-firehose_dir = '/home/exacloud/lustre1/share_your_data_here/precepts/firehose'
+expr_dir = '/home/exacloud/lustre1/share_your_data_here/precepts/firehose'
+copy_dir = '/home/exacloud/lustre1/CompBio/mgrzad/input-data/firehose'
 
 
 def main():
@@ -43,7 +46,13 @@ def main():
     out_path = os.path.join(base_dir, 'output',
                             args.model_name, args.cohort, args.gene)
 
-    use_mtype = MuType({('Gene', args.gene): None})
+    if '_' in args.gene:
+        mut_info = args.gene.split('_')
+        use_mtype = MuType({('Gene', mut_info[0]): mtype_list[mut_info[1]]})
+
+    else:
+        use_mtype = MuType({('Gene', args.gene): None})
+
     clf_stan = eval("model_dict['{}']".format(args.model_name))
 
     if args.verbose:
@@ -61,9 +70,11 @@ def main():
     # loads the expression data and gene mutation data for the given TCGA
     # cohort, with the training/testing cohort split defined by the
     # cross-validation ID for this sub-job
-    cdata = VariantCohort(
-        cohort=args.cohort, mut_genes=[args.gene], mut_levels=['Gene'],
-        expr_source='Firehose', data_dir=firehose_dir, syn=syn,
+    cdata = MutationCohort(
+        cohort=args.cohort, mut_genes=[args.gene.split('_')[0]],
+        mut_levels=['Gene', 'Type', 'Form_base', 'Exon', 'Protein'],
+        expr_source='Firehose', copy_source='Firehose',
+        expr_dir=expr_dir, copy_dir=copy_dir, syn=syn,
         cv_prop=1.0, cv_seed=1298 + 93 * args.cv_id
         )
 

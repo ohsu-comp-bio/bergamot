@@ -66,8 +66,8 @@ margin_model = '''
         vector[Nw] stat_w;
         vector[Nm] stat_m;
 
-        alpha ~ cauchy(0, 0.5);
-        gn_wghts ~ cauchy(0, 0.05);
+        alpha ~ cauchy(0, 0.05);
+        gn_wghts ~ cauchy(0, 0.005);
 
         stat_w = alpha + expr_w * gn_wghts;
         stat_m = alpha + expr_m * gn_wghts;
