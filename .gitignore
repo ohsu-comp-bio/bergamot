@@ -8,4 +8,5 @@ HetMan/experiments/old
 HetMan/experiments/**/setup
 HetMan/experiments/**/output
 HetMan/experiments/**/plots
+HetMan/experiments/**/logs
 
