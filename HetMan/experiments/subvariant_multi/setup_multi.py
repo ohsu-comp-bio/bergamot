@@ -1,8 +1,4 @@
 
-"""Enumerating the pairs of subtypes of a gene in a cohort to be isolated.
-
-"""
-
 import os
 base_dir = os.path.dirname(__file__)
 
@@ -19,12 +15,9 @@ firehose_dir = "/home/exacloud/lustre1/share_your_data_here/precepts/firehose"
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        "Set up the gene subtype expression effect cross-isolation "
-        "experiment by enumerating the pairs of subtypes to be tested."
-        )
+    parser = argparse.ArgumentParser()
 
-    # create positional command line arguments
+    # create positional command line argument
     parser.add_argument('cohort', type=str, help="which TCGA cohort to use")
     parser.add_argument('gene', type=str, help="which gene to consider")
     parser.add_argument('mut_levels', type=str,
@@ -36,8 +29,8 @@ def main():
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='turns on diagnostic messages')
 
-    # parse command line arguments, create directory where found subtypes
-    # will be stored
+    # parse the command line arguments, get the directory where found sub-types
+    # will be saved for future use
     args = parser.parse_args()
     use_lvls = args.mut_levels.split('__')
     out_path = os.path.join(base_dir, 'setup', args.cohort, args.gene)
@@ -57,28 +50,27 @@ def main():
 
     if args.verbose:
         print("Looking for combinations of subtypes of mutations in gene {} "
-              "present in at least {} of the samples in TCGA cohort {} at "
-              "annotation levels {}.\n".format(
-                  args.gene, args.samp_cutoff, args.cohort, use_lvls)
+              "in TCGA cohort {} at annotation levels {}.\n".format(
+                  args.gene, args.cohort, use_lvls)
              )
 
-    cross_mtypes = cdata.train_mut.find_unique_subtypes(
-        max_types=100, max_combs=10, verbose=2,
+    multi_mtypes = cdata.train_mut.find_unique_subtypes(
+        max_types=50, max_combs=2, verbose=2,
         sub_levels=use_lvls, min_type_size=args.samp_cutoff
         )
 
     mtype_samps = {mtype: mtype.get_samples(cdata.train_mut)
-                   for mtype in cross_mtypes}
-    cross_mtypes = {
-        mtype for mtype in cross_mtypes
+                   for mtype in multi_mtypes}
+    multi_mtypes = {
+        mtype for mtype in multi_mtypes
         if len(mtype_samps[mtype]) <= (len(cdata.samples) - args.samp_cutoff)
         }
 
     if args.verbose:
-        print("\nFound {} total sub-types to cross!".format(
-            len(cross_mtypes)))
+        print("\nFound {} total sub-types to use for multi-task "
+              "learning!".format(len(multi_mtypes)))
 
-    use_pairs = {(mtype1, mtype2) for mtype1, mtype2 in combn(cross_mtypes, 2)
+    use_pairs = {(mtype1, mtype2) for mtype1, mtype2 in combn(multi_mtypes, 2)
                  if ((len(mtype_samps[mtype1] - mtype_samps[mtype2])
                       >= args.samp_cutoff)
                      and (len(mtype_samps[mtype2] - mtype_samps[mtype1])
@@ -86,7 +78,7 @@ def main():
                      and (len(mtype_samps[mtype1] | mtype_samps[mtype2])
                           <= (len(cdata.samples) - args.samp_cutoff))
                      and (mtype1 & mtype2).is_empty())}
-
+    
     if args.verbose:
         print("\nFound {} non-overlapping sub-type pairs!".format(
             len(use_pairs)))

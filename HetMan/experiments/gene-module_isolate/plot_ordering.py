@@ -28,9 +28,9 @@ import matplotlib.pyplot as plt
 firehose_dir = "/home/exacloud/lustre1/share_your_data_here/precepts/firehose"
 
 
-def get_similarities(iso_df, base_gene, cdata):
+def get_similarities(iso_df, base_genes, cdata):
     base_pheno = np.array(cdata.train_pheno(
-        MuType({('Gene', base_gene): None})))
+        MuType({('Gene', tuple(base_genes)): None})))
 
     simil_df = pd.DataFrame(index=iso_df.index, columns=iso_df.index,
                             dtype=np.float)
@@ -78,11 +78,12 @@ def get_similarities(iso_df, base_gene, cdata):
 
 
 def plot_singleton_ordering(simil_df, auc_list, args, cdata):
-    fig, ax = plt.subplots(figsize=(16, 14))
-
     singl_mtypes = [mtype for mtype in simil_df.index
                     if len(mtype.subkeys()) == 1]
     simil_df = simil_df.loc[singl_mtypes, singl_mtypes]
+
+    fig, ax = plt.subplots(figsize=(2.1 + len(singl_mtypes) * 0.84,
+                                    1.0 + len(singl_mtypes) * 0.81))
 
     annot_df = pd.DataFrame(-1.0, index=singl_mtypes, columns=singl_mtypes)
     for singl_mtype in singl_mtypes:
@@ -100,25 +101,25 @@ def plot_singleton_ordering(simil_df, auc_list, args, cdata):
     # draw the heatmap
     ax = sns.heatmap(simil_df, cmap=simil_cmap, vmin=-1.0, vmax=2.0,
                      xticklabels=xlabs, yticklabels=ylabs, square=True,
-                     annot=annot_df, fmt='', annot_kws={'size': 22})
+                     annot=annot_df, fmt='', annot_kws={'size': 14})
 
     # configure the tick labels on the colourbar
     cbar = ax.collections[0].colorbar
     cbar.set_ticks([-1.0, 0.0, 1.0, 2.0])
     cbar.set_ticklabels(['M2 < WT', 'M2 = WT', 'M2 = M1', 'M2 > M1'])
-    cbar.ax.tick_params(labelsize=28) 
+    cbar.ax.tick_params(labelsize=13) 
 
     # configure the tick labels on the heatmap proper
-    plt.xticks(rotation=38, ha='right', size=25)
-    plt.yticks(size=22)
+    plt.xticks(rotation=40, ha='right', size=12)
+    plt.yticks(size=13)
 
     plt.xlabel('M2: Testing Mutation (# of samples)',
-               size=29, weight='semibold')
-    plt.ylabel('M1: Training Mutation', size=29, weight='semibold')
+               size=19, weight='semibold')
+    plt.ylabel('M1: Training Mutation', size=19, weight='semibold')
 
     plt.savefig(os.path.join(
-        plot_dir, "singleton_ordering__{}_{}__{}__samps_{}__{}.png".format(
-            args.cohort, args.gene, args.classif,
+        plot_dir, "singleton_ordering__{}__{}__{}__samps_{}__{}.png".format(
+            args.cohort, '_'.join(sorted(args.genes)), args.classif,
             args.samp_cutoff, args.mut_levels
             )),
         dpi=300, bbox_inches='tight'
@@ -128,37 +129,11 @@ def plot_singleton_ordering(simil_df, auc_list, args, cdata):
 
 
 def plot_all_ordering(simil_df, auc_list, args, cdata):
-    fig, ax = plt.subplots(figsize=(16, 14))
-
-    ax = sns.heatmap(simil_df, cmap=simil_cmap, vmin=-1.0, vmax=2.0,
-                     xticklabels=False, square=True)
-
-    cbar = ax.collections[0].colorbar
-    cbar.set_ticks([-1.0, 0.0, 1.0, 2.0])
-    cbar.set_ticklabels(['M2 < WT', 'M2 = WT', 'M2 = M1', 'M2 > M1'])
-    cbar.ax.tick_params(labelsize=22) 
-
-    plt.xlabel('M2: Testing Mutation (# of samples)',
-               size=24, weight='semibold')
-    plt.ylabel('M1: Training Mutation', size=24, weight='semibold')
-
-    plt.savefig(os.path.join(
-        plot_dir, "all_ordering__{}_{}__{}__samps_{}__{}.png".format(
-            args.cohort, args.gene, args.classif,
-            args.samp_cutoff, args.mut_levels
-            )),
-        dpi=300, bbox_inches='tight'
-        )
-
-    plt.close()
-
-
-def plot_all_clustering(simil_df, auc_list, args, cdata):
     row_linkage = hierarchy.linkage(
         distance.pdist(simil_df, metric='cityblock'), method='centroid')
 
     gr = sns.clustermap(
-        simil_df, cmap=simil_cmap, figsize=(16, 14), vmin=-1.0, vmax=2.0,
+        simil_df, cmap=simil_cmap, figsize=(16, 13), vmin=-1.0, vmax=2.0,
         row_linkage=row_linkage, col_linkage=row_linkage,
         )
 
@@ -166,8 +141,8 @@ def plot_all_clustering(simil_df, auc_list, args, cdata):
     gr.cax.set_visible(False)
 
     plt.savefig(os.path.join(
-        plot_dir, "all_clustering__{}_{}__{}__samps_{}__{}.png".format(
-            args.cohort, args.gene, args.classif,
+        plot_dir, "all_ordering__{}__{}__{}__samps_{}__{}.png".format(
+            args.cohort, '_'.join(sorted(args.genes)), args.classif,
             args.samp_cutoff, args.mut_levels
             )),
         dpi=300, bbox_inches='tight'
@@ -183,11 +158,12 @@ def main():
         )
 
     parser.add_argument('cohort', help='a TCGA cohort')
-    parser.add_argument('gene', help='a mutated gene')
     parser.add_argument('classif', help='a mutation classifier')
-    parser.add_argument('mut_levels', default='Form_base__Exon',
+    parser.add_argument('mut_levels', type=str,
                         help='a set of mutation annotation levels')
-    parser.add_argument('--samp_cutoff', default=20)
+    parser.add_argument('genes', type=str, nargs='+',
+                        help='a list of mutated genes')
+    parser.add_argument('--samp_cutoff', type=int, default=25)
 
     # parse command-line arguments, create directory where plots will be saved
     args = parser.parse_args()
@@ -199,24 +175,25 @@ def main():
                                 "mgrzad/input-data/synapse")
     syn.login()
 
-    cdata = MutationCohort(cohort=args.cohort, mut_genes=[args.gene],
+    cdata = MutationCohort(cohort=args.cohort, mut_genes=args.genes,
                            mut_levels=['Gene'] + args.mut_levels.split('__'),
                            expr_source='Firehose', expr_dir=firehose_dir,
                            syn=syn, cv_prop=1.0)
 
     simil_df, auc_list = get_similarities(load_infer_output(
-        os.path.join(base_dir, 'output', args.cohort, args.gene, args.classif,
+        os.path.join(base_dir, 'output', args.cohort,
+                     '_'.join(sorted(args.genes)), args.classif,
                      'samps_{}'.format(args.samp_cutoff), args.mut_levels)
         ),
-        args.gene, cdata)
+        args.genes, cdata)
+    print(simil_df.shape)
 
     simil_rank = simil_df.mean(axis=1) - simil_df.mean(axis=0)
     simil_order = simil_rank.sort_values().index
-    simil_df = simil_df.loc[simil_order, simil_order]
+    simil_df = simil_df.loc[simil_order, reversed(simil_order)]
 
     plot_singleton_ordering(simil_df.copy(), auc_list.copy(), args, cdata)
     plot_all_ordering(simil_df.copy(), auc_list.copy(), args, cdata)
-    plot_all_clustering(simil_df.copy(), auc_list.copy(), args, cdata)
 
 
 if __name__ == '__main__':
