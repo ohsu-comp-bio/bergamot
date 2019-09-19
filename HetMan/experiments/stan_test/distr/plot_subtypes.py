@@ -24,7 +24,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.lines import Line2D
 
-firehose_dir = '/home/exacloud/lustre1/share_your_data_here/precepts/firehose'
+expr_dir = '/home/exacloud/lustre1/share_your_data_here/precepts/firehose'
+copy_dir = '/home/exacloud/lustre1/CompBio/mgrzad/input-data/firehose'
 
 
 def plot_subtype_violins(out_data, args, cdata, use_levels):
@@ -41,6 +42,19 @@ def plot_subtype_violins(out_data, args, cdata, use_levels):
     all_mtype = MuType(cdata.train_mut.allkey())
     all_pheno = np.array(cdata.train_pheno(all_mtype))
 
+def plot_label_stability(out_data, args, cdata):
+    fig, ax = plt.subplots(figsize=(13, 8))
+    kern_bw = (np.max(out_data) - np.min(out_data)) / 40
+    mut_clr = sns.hls_palette(1, l=.4, s=.9)[0]
+    
+    if '_' in args.gene:
+        mut_info = args.gene.split('_')
+        use_mtype = MuType({('Gene', mut_info[0]): mtype_list[mut_info[1]]})
+
+    else:
+        use_mtype = MuType({('Gene', args.gene): None})
+
+    mtype_stat = np.array(cdata.train_pheno(use_mtype))
     out_meds = np.percentile(out_data, q=50, axis=1)
     mtype_meds = [('Wild-Type ({} samples)'.format(np.sum(~all_pheno)),
                    out_meds[~all_pheno])]
@@ -68,12 +82,57 @@ def plot_subtype_violins(out_data, args, cdata, use_levels):
                         )),
         dpi=250, bbox_inches='tight'
         )
+    wt_cmap = sns.light_palette('0.07', as_cmap=True)
+    mut_cmap = sns.light_palette(sns.hls_palette(1, l=.33, s=.95)[0],
+                                 as_cmap=True)
+
+    if '_' in args.gene:
+        mut_info = args.gene.split('_')
+        use_mtype = MuType({('Gene', mut_info[0]): mtype_list[mut_info[1]]})
+
+    else:
+        use_mtype = MuType({('Gene', args.gene): None})
+
+    mtype_stat = np.array(cdata.train_pheno(use_mtype))
+    out_means = np.mean(out_data, axis=1)
+    out_sds = np.std(out_data, axis=1)
+
+    ax = sns.kdeplot(out_means[~mtype_stat], out_sds[~mtype_stat],
+                     cmap=wt_cmap, linewidths=2.7, alpha=0.5,
+                     gridsize=1000, shade_lowest=False, n_levels=15,
+                     label='Wild-Type')
+
+    ax = sns.kdeplot(out_means[mtype_stat], out_sds[mtype_stat],
+                     cmap=mut_cmap, linewidths=2.7, alpha=0.5,
+                     gridsize=1000, shade_lowest=False, n_levels=15,
+                     label='{} Mutant'.format(args.gene))
+
+    plt.xlabel('Mutation Score CV Mean', fontsize=20)
+    plt.ylabel('Mutation Score CV SD', fontsize=20)
 
     plt.close()
 
 
 def plot_subtype_stability(out_data, args, cdata, use_levels):
     fig, ax = plt.subplots(figsize=(13, 8))
+
+    if '_' in args.gene:
+        mut_info = args.gene.split('_')
+        use_mtype = MuType({('Gene', mut_info[0]): mtype_list[mut_info[1]]})
+
+    else:
+        use_mtype = MuType({('Gene', args.gene): None})
+
+    out_meds = np.percentile(out_data, q=50, axis=1)
+
+    if subtypes is None:
+        type_lbl = 'all'
+
+        use_subtypes = reduce(
+            or_,
+            [cdata.train_mut.branchtypes(sub_levels=[tp])
+             for tp in cdata.train_mut.get_levels() - {'Gene'}]
+            )
 
     use_phenos = {
         mtype: np.array(cdata.train_pheno(mtype))

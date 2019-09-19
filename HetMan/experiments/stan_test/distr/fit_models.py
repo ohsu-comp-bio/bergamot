@@ -17,7 +17,8 @@ import numpy as np
 from functools import reduce
 from operator import and_
 
-firehose_dir = '/home/exacloud/lustre1/share_your_data_here/precepts/firehose'
+expr_dir = '/home/exacloud/lustre1/share_your_data_here/precepts/firehose'
+copy_dir = '/home/exacloud/lustre1/CompBio/mgrzad/input-data/firehose'
 
 
 def load_output(model_name, solve_method, cohort, gene):
@@ -114,15 +115,14 @@ def main():
     else:
         raise ValueError("Unrecognized <solve_method> argument!")
 
-    if args.verbose:
-        print('Using the following Stan model:\n\n{}'.format(
-            clf_stan.named_steps['fit'].model_code))
+    if '_' in args.gene:
+        mut_info = args.gene.split('_')
+        use_mtype = MuType({('Gene', mut_info[0]): mtype_list[mut_info[1]]})
 
-    # log into Synapse using locally stored credentials
-    syn = synapseclient.Synapse()
-    syn.cache.cache_root_dir = ('/home/exacloud/lustre1/CompBio'
-                                '/mgrzad/input-data/synapse')
-    syn.login()
+    else:
+        use_mtype = MuType({('Gene', args.gene): None})
+
+    clf_stan = eval("model_dict['{}']".format(args.model_name))
     
     cdata = MutationCohort(
         cohort=args.cohort, mut_genes=[args.gene], mut_levels=['Gene'],
